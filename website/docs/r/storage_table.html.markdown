@@ -20,16 +20,16 @@ resource "azurerm_resource_group" "example" {
 
 resource "azurerm_storage_account" "example" {
   name                     = "azureteststorage1"
-  resource_group_name      = "${azurerm_resource_group.example.name}"
-  location                 = "${azurerm_resource_group.example.location}"
+  resource_group_name      = azurerm_resource_group.example.name
+  location                 = azurerm_resource_group.example.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
 resource "azurerm_storage_table" "example" {
   name                 = "mysampletable"
-  resource_group_name  = "${azurerm_resource_group.example.name}"
-  storage_account_name = "${azurerm_storage_account.example.name}"
+  resource_group_name  = azurerm_resource_group.example.name
+  storage_account_name = azurerm_storage_account.example.name
 }
 ```
 
@@ -56,7 +56,7 @@ A `acl` block supports the following:
 
 ---
 
-A `access_policy` block supports the following: 
+A `access_policy` block supports the following:
 
 * `expiry` - (Required) The ISO8061 UTC time at which this Access Policy should be valid until.
 
@@ -70,6 +70,15 @@ A `access_policy` block supports the following:
 The following attributes are exported in addition to the arguments listed above:
 
 * `id` - The ID of the Table within the Storage Account.
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 30 minutes) Used when creating the Storage Table.
+* `update` - (Defaults to 30 minutes) Used when updating the Storage Table.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Storage Table.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Storage Table.
 
 ## Import
 

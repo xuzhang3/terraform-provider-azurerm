@@ -20,13 +20,13 @@ data "azurerm_dns_zone" "example" {
 }
 
 output "dns_zone_id" {
-  value = "${data.azurerm_dns_zone.example.id}"
+  value = data.azurerm_dns_zone.example.id
 }
 ```
 
 ## Argument Reference
 
-* `name` - (Required) The name of the DNS Zone.
+* `name` - The name of the DNS Zone.
 * `resource_group_name` - (Optional) The Name of the Resource Group where the DNS Zone exists.
 If the Name of the Resource Group is not provided, the first DNS Zone from the list of DNS Zones
 in your subscription that matches `name` will be returned.
@@ -43,4 +43,10 @@ in your subscription that matches `name` will be returned.
 * `tags` - A mapping of tags to assign to the EventHub Namespace.
 * `zone_type` - (**Deprecated**) The type of this DNS zone, such as `Public` or `Private`.
 
-~> **NOTE:** This field is deprecated since Private DNS is now a separate resource and will be removed in 2.0 of the Azure Provider.
+~> **Note:** This field is deprecated since Private DNS is now a separate resource and will be removed in 2.0 of the Azure Provider.
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `read` - (Defaults to 5 minutes) Used when retrieving the DNS Zone.

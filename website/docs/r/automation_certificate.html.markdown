@@ -20,8 +20,8 @@ resource "azurerm_resource_group" "example" {
 
 resource "azurerm_automation_account" "example" {
   name                = "account1"
-  location            = "${azurerm_resource_group.example.location}"
-  resource_group_name = "${azurerm_resource_group.example.name}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
 
   sku_name = "Basic"
 }
@@ -32,7 +32,7 @@ resource "azurerm_automation_certificate" "example" {
   account_name        = "${azurerm_automation_account.example.name}"
 
   description = "This is an example certificate"
-  base64      = "${base64encode(file("certificate.pfx"))}"
+  base64      = base64encode(file("certificate.pfx"))
 }
 ```
 
@@ -59,6 +59,15 @@ The following attributes are exported:
 * `is_exportable` - The is exportable flag of the certificate.
 
 * `thumbprint` - The thumbprint for the certificate.
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 30 minutes) Used when creating the Automation Certificate.
+* `update` - (Defaults to 30 minutes) Used when updating the Automation Certificate.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Automation Certificate.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Automation Certificate.
 
 ## Import
 

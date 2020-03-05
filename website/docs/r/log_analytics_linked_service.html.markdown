@@ -20,8 +20,8 @@ resource "azurerm_resource_group" "example" {
 
 resource "azurerm_automation_account" "example" {
   name                = "automation-01"
-  location            = "${azurerm_resource_group.example.location}"
-  resource_group_name = "${azurerm_resource_group.example.name}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
 
   sku {
     name = "Basic"
@@ -34,16 +34,16 @@ resource "azurerm_automation_account" "example" {
 
 resource "azurerm_log_analytics_workspace" "example" {
   name                = "workspace-01"
-  location            = "${azurerm_resource_group.example.location}"
-  resource_group_name = "${azurerm_resource_group.example.name}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
 }
 
 resource "azurerm_log_analytics_linked_service" "example" {
-  resource_group_name = "${azurerm_resource_group.example.name}"
-  workspace_name      = "${azurerm_log_analytics_workspace.example.name}"
-  resource_id         = "${azurerm_automation_account.example.id}"
+  resource_group_name = azurerm_resource_group.example.name
+  workspace_name      = azurerm_log_analytics_workspace.example.name
+  resource_id         = azurerm_automation_account.example.id
 }
 ```
 
@@ -76,6 +76,15 @@ The following attributes are exported:
 * `id` - The Log Analytics Linked Service ID.
 
 * `name` - The automatically generated name of the Linked Service. This cannot be specified. The format is always `<workspace_name>/<linked_service_name>` e.g. `workspace1/Automation`
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 30 minutes) Used when creating the Log Analytics Workspace.
+* `update` - (Defaults to 30 minutes) Used when updating the Log Analytics Workspace.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Log Analytics Workspace.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Log Analytics Workspace.
 
 ## Import
 

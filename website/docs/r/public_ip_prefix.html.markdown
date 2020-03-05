@@ -20,8 +20,8 @@ resource "azurerm_resource_group" "example" {
 
 resource "azurerm_public_ip_prefix" "example" {
   name                = "acceptanceTestPublicIpPrefix1"
-  location            = "${azurerm_resource_group.example.location}"
-  resource_group_name = "${azurerm_resource_group.example.name}"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
 
   prefix_length = 31
 
@@ -61,6 +61,15 @@ The following attributes are exported:
 
 * `id` - The Public IP Prefix ID.
 * `ip_prefix` - The IP address prefix value that was allocated.
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 30 minutes) Used when creating the Public IP Prefix.
+* `update` - (Defaults to 30 minutes) Used when updating the Public IP Prefix.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Public IP Prefix.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Public IP Prefix.
 
 ## Import
 

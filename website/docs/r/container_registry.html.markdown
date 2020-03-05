@@ -24,8 +24,8 @@ resource "azurerm_resource_group" "rg" {
 
 resource "azurerm_container_registry" "acr" {
   name                     = "containerRegistry1"
-  resource_group_name      = "${azurerm_resource_group.rg.name}"
-  location                 = "${azurerm_resource_group.rg.location}"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
   sku                      = "Premium"
   admin_enabled            = false
   georeplication_locations = ["East US", "West Europe"]
@@ -84,13 +84,22 @@ The following arguments are supported:
 
 The following attributes are exported:
 
-* `id` - The Container Registry ID.
+* `id` - The ID of the Container Registry.
 
 * `login_server` - The URL that can be used to log into the container registry.
 
 * `admin_username` - The Username associated with the Container Registry Admin account - if the admin account is enabled.
 
 * `admin_password` - The Password associated with the Container Registry Admin account - if the admin account is enabled.
+
+## Timeouts
+
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+
+* `create` - (Defaults to 30 minutes) Used when creating the Container Registry.
+* `update` - (Defaults to 30 minutes) Used when updating the Container Registry.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Container Registry.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Container Registry.
 
 ## Import
 

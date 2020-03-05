@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
@@ -60,7 +61,7 @@ func resourceArmKeyVaultKey() *schema.Resource {
 				ForceNew:      true,
 				Computed:      true,
 				Deprecated:    "This property has been deprecated in favour of the key_vault_id property. This will prevent a class of bugs as described in https://github.com/terraform-providers/terraform-provider-azurerm/issues/2396 and will be removed in version 2.0 of the provider",
-				ValidateFunc:  validate.URLIsHTTPS,
+				ValidateFunc:  validation.IsURLWithHTTPS,
 				ConflictsWith: []string{"key_vault_id"},
 			},
 
@@ -120,6 +121,18 @@ func resourceArmKeyVaultKey() *schema.Resource {
 				// but handle the diff so that we don't break existing configurations and
 				// imported EC keys
 				ConflictsWith: []string{"key_size"},
+			},
+
+			"not_before_date": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validate.RFC3339Time,
+			},
+
+			"expiration_date": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validate.RFC3339Time,
 			},
 
 			// Computed
@@ -225,6 +238,18 @@ func resourceArmKeyVaultKeyCreate(d *schema.ResourceData, meta interface{}) erro
 	// TODO: support `oct` once this is fixed
 	// https://github.com/Azure/azure-rest-api-specs/issues/1739#issuecomment-332236257
 
+	if v, ok := d.GetOk("not_before_date"); ok {
+		notBeforeDate, _ := time.Parse(time.RFC3339, v.(string)) //validated by schema
+		notBeforeUnixTime := date.UnixTime(notBeforeDate)
+		parameters.KeyAttributes.NotBefore = &notBeforeUnixTime
+	}
+
+	if v, ok := d.GetOk("expiration_date"); ok {
+		expirationDate, _ := time.Parse(time.RFC3339, v.(string)) //validated by schema
+		expirationUnixTime := date.UnixTime(expirationDate)
+		parameters.KeyAttributes.Expires = &expirationUnixTime
+	}
+
 	if _, err := client.CreateKey(ctx, keyVaultBaseUri, name, parameters); err != nil {
 		return fmt.Errorf("Error Creating Key: %+v", err)
 	}
@@ -278,6 +303,18 @@ func resourceArmKeyVaultKeyUpdate(d *schema.ResourceData, meta interface{}) erro
 			Enabled: utils.Bool(true),
 		},
 		Tags: tags.Expand(t),
+	}
+
+	if v, ok := d.GetOk("not_before_date"); ok {
+		notBeforeDate, _ := time.Parse(time.RFC3339, v.(string)) //validated by schema
+		notBeforeUnixTime := date.UnixTime(notBeforeDate)
+		parameters.KeyAttributes.NotBefore = &notBeforeUnixTime
+	}
+
+	if v, ok := d.GetOk("expiration_date"); ok {
+		expirationDate, _ := time.Parse(time.RFC3339, v.(string)) //validated by schema
+		expirationUnixTime := date.UnixTime(expirationDate)
+		parameters.KeyAttributes.Expires = &expirationUnixTime
 	}
 
 	if _, err = client.UpdateKey(ctx, id.KeyVaultBaseUrl, id.Name, id.Version, parameters); err != nil {
@@ -352,6 +389,16 @@ func resourceArmKeyVaultKeyRead(d *schema.ResourceData, meta interface{}) error 
 		}
 
 		d.Set("curve", key.Crv)
+	}
+
+	if attributes := resp.Attributes; attributes != nil {
+		if v := attributes.NotBefore; v != nil {
+			d.Set("not_before_date", time.Time(*v).Format(time.RFC3339))
+		}
+
+		if v := attributes.Expires; v != nil {
+			d.Set("expiration_date", time.Time(*v).Format(time.RFC3339))
+		}
 	}
 
 	// Computed
