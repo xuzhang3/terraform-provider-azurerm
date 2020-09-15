@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-03-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-05-01/network"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/acceptance"
@@ -276,6 +276,29 @@ func TestAccAzureRMFirewallNetworkRuleCollection_updateFirewallTags(t *testing.T
 					resource.TestCheckResourceAttr(data.ResourceName, "rule.#", "1"),
 				),
 			},
+		},
+	})
+}
+
+func TestAccAzureRMFirewallNetworkRuleCollection_serviceTag(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_firewall_network_rule_collection", "test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckAzureRMFirewallDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureRMFirewallNetworkRuleCollection_serviceTag(data),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckAzureRMFirewallNetworkRuleCollectionExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", "acctestnrc"),
+					resource.TestCheckResourceAttr(data.ResourceName, "priority", "100"),
+					resource.TestCheckResourceAttr(data.ResourceName, "action", "Allow"),
+					resource.TestCheckResourceAttr(data.ResourceName, "rule.#", "1"),
+				),
+			},
+			data.ImportStep(),
 		},
 	})
 }
@@ -699,6 +722,41 @@ resource "azurerm_firewall_network_rule_collection" "test" {
 
     destination_addresses = [
       "8.8.8.8",
+    ]
+
+    protocols = [
+      "Any",
+    ]
+  }
+}
+`, template)
+}
+
+func testAccAzureRMFirewallNetworkRuleCollection_serviceTag(data acceptance.TestData) string {
+	template := testAccAzureRMFirewall_basic(data)
+	return fmt.Sprintf(`
+%s
+
+resource "azurerm_firewall_network_rule_collection" "test" {
+  name                = "acctestnrc"
+  azure_firewall_name = azurerm_firewall.test.name
+  resource_group_name = azurerm_resource_group.test.name
+  priority            = 100
+  action              = "Allow"
+
+  rule {
+    name = "rule1"
+
+    source_addresses = [
+      "10.0.0.0/16",
+    ]
+
+    destination_ports = [
+      "53",
+    ]
+
+    destination_addresses = [
+      "ApiManagement",
     ]
 
     protocols = [
