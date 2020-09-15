@@ -12,17 +12,17 @@ import (
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
-func TestAccAzureRMResourceGraphGraphQuery_basic(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+func TestAccAzureRMResourceGraphQuery_basic(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_resource_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckAzureRMResourceGraphGraphQueryDestroy,
+		CheckDestroy: testCheckAzureRMResourceGraphQueryDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureRMResourceGraphGraphQuery_basic(data),
+				Config: testAccAzureRMResourceGraphQuery_basic(data),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+					testCheckAzureRMResourceGraphQueryExists(data.ResourceName),
 				),
 			},
 			data.ImportStep(),
@@ -30,35 +30,35 @@ func TestAccAzureRMResourceGraphGraphQuery_basic(t *testing.T) {
 	})
 }
 
-func TestAccAzureRMResourceGraphGraphQuery_requiresImport(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+func TestAccAzureRMResourceGraphQuery_requiresImport(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_resource_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckAzureRMResourceGraphGraphQueryDestroy,
+		CheckDestroy: testCheckAzureRMResourceGraphQueryDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureRMResourceGraphGraphQuery_basic(data),
+				Config: testAccAzureRMResourceGraphQuery_basic(data),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+					testCheckAzureRMResourceGraphQueryExists(data.ResourceName),
 				),
 			},
-			data.RequiresImportErrorStep(testAccAzureRMResourceGraphGraphQuery_requiresImport),
+			data.RequiresImportErrorStep(testAccAzureRMResourceGraphQuery_requiresImport),
 		},
 	})
 }
 
-func TestAccAzureRMResourceGraphGraphQuery_complete(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+func TestAccAzureRMResourceGraphQuery_complete(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_resource_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckAzureRMResourceGraphGraphQueryDestroy,
+		CheckDestroy: testCheckAzureRMResourceGraphQueryDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccAzureRMResourceGraphGraphQuery_complete(data),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+					testCheckAzureRMResourceGraphQueryExists(data.ResourceName),
 				),
 			},
 			data.ImportStep(),
@@ -66,24 +66,24 @@ func TestAccAzureRMResourceGraphGraphQuery_complete(t *testing.T) {
 	})
 }
 
-func TestAccAzureRMResourceGraphGraphQuery_update(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+func TestAccAzureRMResourceGraphQuery_update(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_resource_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckAzureRMResourceGraphGraphQueryDestroy,
+		CheckDestroy: testCheckAzureRMResourceGraphQueryDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAzureRMResourceGraphGraphQuery_basic(data),
+				Config: testAccAzureRMResourceGraphQuery_basic(data),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+					testCheckAzureRMResourceGraphQueryExists(data.ResourceName),
 				),
 			},
 			data.ImportStep(),
 			{
 				Config: testAccAzureRMResourceGraphGraphQuery_complete(data),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+					testCheckAzureRMResourceGraphQueryExists(data.ResourceName),
 					resource.TestCheckResourceAttr(data.ResourceName, "description", "Docker VMs in PROD"),
 					resource.TestCheckResourceAttr(data.ResourceName, "query", "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"),
 					resource.TestCheckResourceAttr(data.ResourceName, "tags.%", "1"),
@@ -94,7 +94,7 @@ func TestAccAzureRMResourceGraphGraphQuery_update(t *testing.T) {
 	})
 }
 
-func testCheckAzureRMResourceGraphGraphQueryExists(resourceName string) resource.TestCheckFunc {
+func testCheckAzureRMResourceGraphQueryExists(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		client := acceptance.AzureProvider.Meta().(*clients.Client).ResourceGraph.GraphQueryClient
 		ctx := acceptance.AzureProvider.Meta().(*clients.Client).StopContext
@@ -116,12 +116,12 @@ func testCheckAzureRMResourceGraphGraphQueryExists(resourceName string) resource
 	}
 }
 
-func testCheckAzureRMResourceGraphGraphQueryDestroy(s *terraform.State) error {
+func testCheckAzureRMResourceGraphQueryDestroy(s *terraform.State) error {
 	client := acceptance.AzureProvider.Meta().(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx := acceptance.AzureProvider.Meta().(*clients.Client).StopContext
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "azurerm_resource_graph_graph_query" {
+		if rs.Type != "azurerm_resource_graph_query" {
 			continue
 		}
 		id, err := parse.ResourceGraphGraphQueryID(rs.Primary.ID)
@@ -138,7 +138,7 @@ func testCheckAzureRMResourceGraphGraphQueryDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccAzureRMResourceGraphGraphQuery_template(data acceptance.TestData) string {
+func testAccAzureRMResourceGraphQuery_template(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -151,40 +151,40 @@ resource "azurerm_resource_group" "test" {
 `, data.RandomInteger, data.Locations.Primary)
 }
 
-func testAccAzureRMResourceGraphGraphQuery_basic(data acceptance.TestData) string {
-	template := testAccAzureRMResourceGraphGraphQuery_template(data)
+func testAccAzureRMResourceGraphQuery_basic(data acceptance.TestData) string {
+	template := testAccAzureRMResourceGraphQuery_template(data)
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "test" {
+resource "azurerm_resource_graph_query" "test" {
   resource_group_name = azurerm_resource_group.test.name
-  resource_name       = "acctest-rggq-%d"
+  name                = "acctest-rggq-%d"
   query               = "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"
 }
 `, template, data.RandomInteger)
 }
 
-func testAccAzureRMResourceGraphGraphQuery_requiresImport(data acceptance.TestData) string {
-	config := testAccAzureRMResourceGraphGraphQuery_basic(data)
+func testAccAzureRMResourceGraphQuery_requiresImport(data acceptance.TestData) string {
+	config := testAccAzureRMResourceGraphQuery_basic(data)
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "import" {
-  resource_group_name = azurerm_resource_graph_graph_query.test.resource_group_name
-  query               = azurerm_resource_graph_graph_query.test.query
-  resource_name       = azurerm_resource_graph_graph_query.test.resource_name
+resource "azurerm_resource_graph_query" "import" {
+  resource_group_name = azurerm_resource_graph_query.test.resource_group_name
+  query               = azurerm_resource_graph_query.test.query
+  name                = azurerm_resource_graph_query.test.name
 }
 `, config)
 }
 
 func testAccAzureRMResourceGraphGraphQuery_complete(data acceptance.TestData) string {
-	template := testAccAzureRMResourceGraphGraphQuery_template(data)
+	template := testAccAzureRMResourceGraphQuery_template(data)
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "test" {
+resource "azurerm_resource_graph_query" "test" {
   resource_group_name = azurerm_resource_group.test.name
-  resource_name       = "acctest-rggq-%d"
+  name                = "acctest-rggq-%d"
   query               = "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"
   description         = "Docker VMs in PROD"
   tags = {

@@ -14,7 +14,7 @@ type ResourceGraphGraphQueryId struct {
 func ResourceGraphGraphQueryID(input string) (*ResourceGraphGraphQueryId, error) {
 	id, err := azure.ParseAzureResourceID(input)
 	if err != nil {
-		return nil, fmt.Errorf("[ERROR] Unable to parse ResourceGraphGraphQuery ID %q: %+v", input, err)
+		return nil, fmt.Errorf("parsing ResourceGraphGraphQuery ID %q: %+v", input, err)
 	}
 
 	resourceGraphGraphQuery := ResourceGraphGraphQueryId{

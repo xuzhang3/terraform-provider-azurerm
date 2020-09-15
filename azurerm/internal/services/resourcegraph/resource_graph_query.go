@@ -17,12 +17,12 @@ import (
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
 
-func resourceArmResourceGraphGraphQuery() *schema.Resource {
+func resourceArmResourceGraphQuery() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceArmResourceGraphGraphQueryCreate,
-		Read:   resourceArmResourceGraphGraphQueryRead,
-		Update: resourceArmResourceGraphGraphQueryUpdate,
-		Delete: resourceArmResourceGraphGraphQueryDelete,
+		Create: resourceArmResourceGraphQueryCreate,
+		Read:   resourceArmResourceGraphQueryRead,
+		Update: resourceArmResourceGraphQueryUpdate,
+		Delete: resourceArmResourceGraphQueryDelete,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Minute),
@@ -39,15 +39,10 @@ func resourceArmResourceGraphGraphQuery() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
-				Computed: true,
-				ForceNew: true,
-			},
-			"resource_group_name": azure.SchemaResourceGroupName(),
-			"resource_name": {
-				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
+			"resource_group_name": azure.SchemaResourceGroupName(),
 			"query": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -56,35 +51,27 @@ func resourceArmResourceGraphGraphQuery() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"result_kind": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"time_modified": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"tags": tags.Schema(),
 		},
 	}
 }
-func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceArmResourceGraphQueryCreate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForCreate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
 	resourceGroup := d.Get("resource_group_name").(string)
-	resourceName := d.Get("resource_name").(string)
+	resourceName := d.Get("name").(string)
 
 	if d.IsNewResource() {
 		existing, err := client.Get(ctx, resourceGroup, resourceName)
 		if err != nil {
 			if !utils.ResponseWasNotFound(existing.Response) {
-				return fmt.Errorf("failure in checking for present of existing ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+				return fmt.Errorf("checking for present of existing ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
 			}
 		}
 		if existing.ID != nil && *existing.ID != "" {
-			return tf.ImportAsExistsError("azurerm_resource_graph_graph_query", *existing.ID)
+			return tf.ImportAsExistsError("azurerm_resource_graph_query", *existing.ID)
 		}
 	}
 
@@ -98,12 +85,12 @@ func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta inter
 	}
 
 	if _, err := client.CreateOrUpdate(ctx, resourceGroup, resourceName, props); err != nil {
-		return fmt.Errorf("failure in creating/updating ResourceGraph GraphQuery (Resource Group %q / resourceName %q / properties %v): %+v", resourceGroup, resourceName, props, err)
+		return fmt.Errorf("creating/updating ResourceGraph GraphQuery (Resource Group %q / resourceName %q / properties %v): %+v", resourceGroup, resourceName, props, err)
 	}
 
 	resp, err := client.Get(ctx, resourceGroup, resourceName)
 	if err != nil {
-		return fmt.Errorf("failure in retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+		return fmt.Errorf("retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
 	}
 
 	if resp.ID == nil || *resp.ID == "" {
@@ -111,10 +98,10 @@ func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta inter
 	}
 
 	d.SetId(*resp.ID)
-	return resourceArmResourceGraphGraphQueryRead(d, meta)
+	return resourceArmResourceGraphQueryRead(d, meta)
 }
 
-func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interface{}) error {
+func resourceArmResourceGraphQueryRead(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForRead(meta.(*clients.Client).StopContext, d)
 	defer cancel()
@@ -134,27 +121,22 @@ func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interfa
 		return fmt.Errorf("failure in retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", id.ResourceGroup, id.ResourceName, err)
 	}
 	d.Set("resource_group_name", id.ResourceGroup)
-	d.Set("resource_name", id.ResourceName)
-	if name := resp.Name; name != nil {
-		d.Set("name", name)
-	}
+	d.Set("name", id.ResourceName)
 
 	if props := resp.GraphQueryProperties; props != nil {
 		d.Set("query", props.Query)
 		d.Set("description", props.Description)
-		d.Set("result_kind", props.ResultKind)
-		d.Set("time_modified", props.TimeModified.Format(time.RFC3339))
 	}
 	return tags.FlattenAndSet(d, resp.Tags)
 }
 
-func resourceArmResourceGraphGraphQueryUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceArmResourceGraphQueryUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForUpdate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
 	resourceGroup := d.Get("resource_group_name").(string)
-	resourceName := d.Get("resource_name").(string)
+	resourceName := d.Get("name").(string)
 
 	body := resourcegraph.GraphQueryUpdateParameters{
 		GraphQueryPropertiesUpdateParameters: &resourcegraph.GraphQueryPropertiesUpdateParameters{
@@ -178,10 +160,10 @@ func resourceArmResourceGraphGraphQueryUpdate(d *schema.ResourceData, meta inter
 	}
 
 	d.SetId(*resp.ID)
-	return resourceArmResourceGraphGraphQueryRead(d, meta)
+	return resourceArmResourceGraphQueryRead(d, meta)
 }
 
-func resourceArmResourceGraphGraphQueryDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceArmResourceGraphQueryDelete(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForDelete(meta.(*clients.Client).StopContext, d)
 	defer cancel()

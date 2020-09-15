@@ -24,27 +24,14 @@ func dataSourceResourceGraphGraphQuery() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"resource_group_name": azure.SchemaResourceGroupNameForDataSource(),
-			"resource_name": {
-				Type:     schema.TypeString,
 				Required: true,
 			},
+			"resource_group_name": azure.SchemaResourceGroupNameForDataSource(),
 			"query": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-			"result_kind": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"time_modified": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -59,7 +46,7 @@ func dataSourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta inter
 	defer cancel()
 
 	resourceGroup := d.Get("resource_group_name").(string)
-	resourceName := d.Get("resource_name").(string)
+	resourceName := d.Get("name").(string)
 
 	resp, err := client.Get(ctx, resourceGroup, resourceName)
 	if err != nil {
@@ -68,21 +55,17 @@ func dataSourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta inter
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("failure in retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+		return fmt.Errorf("retrieving Resource Graph Query %q (Resource Group %q): %+v", resourceName, resourceGroup, err)
 	}
 	if id := resp.ID; id != nil {
 		d.SetId(*resp.ID)
 	}
 	d.Set("resource_group_name", resourceGroup)
-	d.Set("resource_name", resourceName)
-	if name := resp.Name; name != nil {
-		d.Set("name", name)
-	}
+	d.Set("name", resp.Name)
+
 	if props := resp.GraphQueryProperties; props != nil {
 		d.Set("query", props.Query)
 		d.Set("description", props.Description)
-		d.Set("result_kind", props.ResultKind)
-		d.Set("time_modified", props.TimeModified.Format(time.RFC3339))
 	}
 	return nil
 }
