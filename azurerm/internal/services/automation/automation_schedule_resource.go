@@ -11,12 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/set"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/tf"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/validate"
+	azvalidate "github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/validate"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
-	validate2 "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/automation/validate"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/automation/validate"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tf/set"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tf/suppress"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/timeouts"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
@@ -44,7 +44,7 @@ func resourceArmAutomationSchedule() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				ForceNew:     true,
-				ValidateFunc: validate2.AutomationScheduleName(),
+				ValidateFunc: validate.AutomationScheduleName(),
 			},
 
 			"resource_group_name": azure.SchemaResourceGroupName(),
@@ -53,7 +53,7 @@ func resourceArmAutomationSchedule() *schema.Resource {
 				Type:         schema.TypeString,
 				Required:     true,
 				ForceNew:     true,
-				ValidateFunc: validate2.AutomationAccountName(),
+				ValidateFunc: validate.AutomationAccountName(),
 			},
 
 			"frequency": {
@@ -103,7 +103,7 @@ func resourceArmAutomationSchedule() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "UTC",
-				ValidateFunc: validate.AzureTimeZoneString(),
+				ValidateFunc: azvalidate.AzureTimeZoneString(),
 			},
 
 			"week_days": {
@@ -373,7 +373,7 @@ func expandArmAutomationScheduleAdvanced(d *schema.ResourceData, isUpdate bool) 
 	expandedAdvancedSchedule := automation.AdvancedSchedule{}
 
 	// If frequency is set to `Month` the `week_days` array cannot be set (even empty), otherwise the API returns an error.
-	// During update it can be set and it will not return an error. Workaround for the APIs behavior
+	// During update it can be set and it will not return an error. Workaround for the APIs behaviour
 	if v, ok := d.GetOk("week_days"); ok {
 		weekDays := v.(*schema.Set).List()
 		expandedWeekDays := make([]string, len(weekDays))
