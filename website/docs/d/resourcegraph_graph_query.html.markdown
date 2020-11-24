@@ -27,9 +27,9 @@ output "id" {
 
 The following arguments are supported:
 
-* `resource_group_name` - (Required) The name of the Resource Group where the Resource Graph exists. Changing this forces a new Resource Graph to be created.
+* `name` - (Required) The name of the Graph Query resource. Changing this forces a new Resource Graph to be created.
 
-* `resource_name` - (Required) The name of the Graph Query resource. Changing this forces a new Resource Graph to be created.
+* `resource_group_name` - (Required) The name of the Resource Group where the Resource Graph exists. Changing this forces a new Resource Graph to be created.
 
 ---
 
