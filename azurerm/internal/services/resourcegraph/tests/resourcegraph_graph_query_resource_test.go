@@ -13,7 +13,7 @@ import (
 )
 
 func TestAccAzureRMResourceGraphGraphQuery_basic(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+	data := acceptance.BuildTestData(t, "azurerm_resourcegraph_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
@@ -31,7 +31,7 @@ func TestAccAzureRMResourceGraphGraphQuery_basic(t *testing.T) {
 }
 
 func TestAccAzureRMResourceGraphGraphQuery_requiresImport(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+	data := acceptance.BuildTestData(t, "azurerm_resourcegraph_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
@@ -49,7 +49,7 @@ func TestAccAzureRMResourceGraphGraphQuery_requiresImport(t *testing.T) {
 }
 
 func TestAccAzureRMResourceGraphGraphQuery_complete(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+	data := acceptance.BuildTestData(t, "azurerm_resourcegraph_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
@@ -67,7 +67,7 @@ func TestAccAzureRMResourceGraphGraphQuery_complete(t *testing.T) {
 }
 
 func TestAccAzureRMResourceGraphGraphQuery_update(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_resource_graph_graph_query", "test")
+	data := acceptance.BuildTestData(t, "azurerm_resourcegraph_graph_query", "test")
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
@@ -84,12 +84,16 @@ func TestAccAzureRMResourceGraphGraphQuery_update(t *testing.T) {
 				Config: testAccAzureRMResourceGraphGraphQuery_complete(data),
 				Check: resource.ComposeTestCheckFunc(
 					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
-					resource.TestCheckResourceAttr(data.ResourceName, "description", "Docker VMs in PROD"),
-					resource.TestCheckResourceAttr(data.ResourceName, "query", "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"),
-					resource.TestCheckResourceAttr(data.ResourceName, "tags.%", "1"),
-					resource.TestCheckResourceAttr(data.ResourceName, "tags.ENV", "Test"),
 				),
 			},
+			data.ImportStep(),
+			{
+				Config: testAccAzureRMResourceGraphGraphQuery_basic(data),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckAzureRMResourceGraphGraphQueryExists(data.ResourceName),
+				),
+			},
+			data.ImportStep(),
 		},
 	})
 }
@@ -100,17 +104,17 @@ func testCheckAzureRMResourceGraphGraphQueryExists(resourceName string) resource
 		ctx := acceptance.AzureProvider.Meta().(*clients.Client).StopContext
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("resourceGraph GraphQuery not found: %s", resourceName)
+			return fmt.Errorf("resourcegraph GraphQuery not found: %s", resourceName)
 		}
 		id, err := parse.ResourceGraphGraphQueryID(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-		if resp, err := client.Get(ctx, id.ResourceGroup, id.ResourceName); err != nil {
-			if !utils.ResponseWasNotFound(resp.Response) {
-				return fmt.Errorf("bad: ResourceGraph GraphQuery %q does not exist", resourceName)
+		if resp, err := client.Get(ctx, id.ResourceGroup, id.Name); err != nil {
+			if utils.ResponseWasNotFound(resp.Response) {
+				return fmt.Errorf("bad: Resourcegraph GraphQuery %q does not exist", id.Name)
 			}
-			return fmt.Errorf("bad: Get on ResourceGraph.GraphQueryClient: %+v", err)
+			return fmt.Errorf("bad: Get on Resourcegraph.GraphQueryClient: %+v", err)
 		}
 		return nil
 	}
@@ -121,16 +125,16 @@ func testCheckAzureRMResourceGraphGraphQueryDestroy(s *terraform.State) error {
 	ctx := acceptance.AzureProvider.Meta().(*clients.Client).StopContext
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "azurerm_resource_graph_graph_query" {
+		if rs.Type != "azurerm_resourcegraph_graph_query" {
 			continue
 		}
 		id, err := parse.ResourceGraphGraphQueryID(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-		if resp, err := client.Get(ctx, id.ResourceGroup, id.ResourceName); err != nil {
+		if resp, err := client.Get(ctx, id.ResourceGroup, id.Name); err != nil {
 			if !utils.ResponseWasNotFound(resp.Response) {
-				return fmt.Errorf("bad: Get on ResourceGraph.GraphQueryClient: %+v", err)
+				return fmt.Errorf("bad: Get on Resourcegraph.GraphQueryClient: %+v", err)
 			}
 		}
 		return nil
@@ -145,7 +149,7 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "test" {
-  name     = "acctest-rg-%d"
+  name     = "acctest-resourcegraph-%d"
   location = "%s"
 }
 `, data.RandomInteger, data.Locations.Primary)
@@ -156,10 +160,9 @@ func testAccAzureRMResourceGraphGraphQuery_basic(data acceptance.TestData) strin
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "test" {
+resource "azurerm_resourcegraph_graph_query" "test" {
+  name                = "acctest-rgq-%d"
   resource_group_name = azurerm_resource_group.test.name
-  resource_name       = "acctest-rggq-%d"
-  query               = "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"
 }
 `, template, data.RandomInteger)
 }
@@ -169,10 +172,9 @@ func testAccAzureRMResourceGraphGraphQuery_requiresImport(data acceptance.TestDa
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "import" {
-  resource_group_name = azurerm_resource_graph_graph_query.test.resource_group_name
-  query               = azurerm_resource_graph_graph_query.test.query
-  resource_name       = azurerm_resource_graph_graph_query.test.resource_name
+resource "azurerm_resourcegraph_graph_query" "import" {
+  name                = azurerm_resourcegraph_graph_query.test.name
+  resource_group_name = azurerm_resourcegraph_graph_query.test.resource_group_name
 }
 `, config)
 }
@@ -182,11 +184,11 @@ func testAccAzureRMResourceGraphGraphQuery_complete(data acceptance.TestData) st
 	return fmt.Sprintf(`
 %s
 
-resource "azurerm_resource_graph_graph_query" "test" {
+resource "azurerm_resourcegraph_graph_query" "test" {
+  name                = "acctest-rgq-%d"
   resource_group_name = azurerm_resource_group.test.name
-  resource_name       = "acctest-rggq-%d"
-  query               = "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"
   description         = "Docker VMs in PROD"
+  query               = "where isnotnull(tags['Prod']) and properties.extensions[0].Name == 'docker'"
   tags = {
     ENV = "Test"
   }

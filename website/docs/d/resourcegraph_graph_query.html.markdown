@@ -1,25 +1,25 @@
 ---
 subcategory: "Resource Graph"
 layout: "azurerm"
-page_title: "Azure Resource Manager: Data Source: azurerm_resource_graph_graph_query"
+page_title: "Azure Resource Manager: Data Source: azurerm_resourcegraph_graph_query"
 description: |-
   Gets information about an existing Resource Graph.
 ---
 
-# Data Source: azurerm_resource_graph_graph_query
+# Data Source: azurerm_resourcegraph_graph_query
 
 Use this data source to access information about an existing Resource Graph.
 
 ## Example Usage
 
 ```hcl
-data "azurerm_resource_graph_graph_query" "example" {
+data "azurerm_resourcegraph_graph_query" "example" {
+  name                = "existing"
   resource_group_name = "existing"
-  resource_name       = "existing"
 }
 
 output "id" {
-  value = data.azurerm_resource_graph_graph_query.example.id
+  value = data.azurerm_resourcegraph_graph_query.example.id
 }
 ```
 

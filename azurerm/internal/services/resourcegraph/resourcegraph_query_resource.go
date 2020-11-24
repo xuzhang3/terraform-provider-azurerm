@@ -1,6 +1,7 @@
 package resourcegraph
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/tf"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/clients"
-	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/features"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/services/resourcegraph/parse"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tags"
 	azSchema "github.com/terraform-providers/terraform-provider-azurerm/azurerm/internal/tf/schema"
@@ -40,53 +40,43 @@ func resourceArmResourceGraphGraphQuery() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Required: true,
 				ForceNew: true,
 			},
+
 			"resource_group_name": azure.SchemaResourceGroupName(),
-			"resource_name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"query": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
+
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"result_kind": {
+
+			"query": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
 			},
-			"time_modified": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
+
 			"tags": tags.Schema(),
 		},
 	}
 }
 func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta interface{}) error {
+	subscriptionId := meta.(*clients.Client).Account.SubscriptionId
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForCreate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
+	name := d.Get("name").(string)
 	resourceGroup := d.Get("resource_group_name").(string)
-	resourceName := d.Get("resource_name").(string)
 
-	if features.ShouldResourcesBeImported() && d.IsNewResource() {
-		existing, err := client.Get(ctx, resourceGroup, resourceName)
-		if err != nil {
-			if !utils.ResponseWasNotFound(existing.Response) {
-				return fmt.Errorf("failure in checking for present of existing ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
-			}
+	existing, err := client.Get(ctx, resourceGroup, name)
+	if err != nil {
+		if !utils.ResponseWasNotFound(existing.Response) {
+			return fmt.Errorf("checking for present of existing Resourcegraph GraphQuery %q (Resource Group %q): %+v", name, resourceGroup, err)
 		}
-		if existing.ID != nil && *existing.ID != "" {
-			return tf.ImportAsExistsError("azurerm_resource_graph_graph_query", *existing.ID)
-		}
+	}
+	if existing.ID != nil && *existing.ID != "" {
+		return tf.ImportAsExistsError("azurerm_resourcegraph_graph_query", *existing.ID)
 	}
 
 	props := resourcegraph.GraphQueryResource{
@@ -97,25 +87,31 @@ func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta inter
 		},
 		Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
 	}
-
-	if _, err := client.CreateOrUpdate(ctx, resourceGroup, resourceName, props); err != nil {
-		return fmt.Errorf("failure in creating/updating ResourceGraph GraphQuery (Resource Group %q / resourceName %q / properties %v): %+v", resourceGroup, resourceName, props, err)
+	if _, err := client.CreateOrUpdate(ctx, resourceGroup, name, props); err != nil {
+		return fmt.Errorf("creating Resourcegraph GraphQuery %q (Resource Group %q): %+v", name, resourceGroup, err)
 	}
 
-	resp, err := client.Get(ctx, resourceGroup, resourceName)
+	resp, err := client.Get(ctx, resourceGroup, name)
 	if err != nil {
-		return fmt.Errorf("failure in retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+		return fmt.Errorf("retrieving Resourcegraph GraphQuery %q (Resource Group %q): %+v", name, resourceGroup, err)
 	}
 
 	if resp.ID == nil || *resp.ID == "" {
-		return fmt.Errorf("cannot read ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+		return fmt.Errorf("empty or nil ID returned for Resourcegraph GraphQuery %q (Resource Group %q) ID", name, resourceGroup)
 	}
 
-	d.SetId(*resp.ID)
+	id, err := parse.ResourceGraphGraphQueryID(*resp.ID)
+	if err != nil {
+		return err
+	}
+	d.SetId(id.ID(subscriptionId))
+
 	return resourceArmResourceGraphGraphQueryRead(d, meta)
 }
 
 func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interface{}) error {
+	log.Printf("TESTETSETESTTEST Resource ID %+v ,", d.Id())
+
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForRead(meta.(*clients.Client).StopContext, d)
 	defer cancel()
@@ -125,26 +121,21 @@ func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interfa
 		return err
 	}
 
-	resp, err := client.Get(ctx, id.ResourceGroup, id.ResourceName)
+	log.Printf("TESTETSETESTTEST %+v , Name %+v,", id.ResourceGroup, id.Name)
+	resp, err := client.Get(ctx, id.ResourceGroup, id.Name)
 	if err != nil {
 		if utils.ResponseWasNotFound(resp.Response) {
-			log.Printf("[INFO] ResourceGraph %q does not exist - removing from state", d.Id())
+			log.Printf("[INFO] resourcegraph %q does not exist - removing from state", d.Id())
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("failure in retrieving ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", id.ResourceGroup, id.ResourceName, err)
+		return fmt.Errorf("retrieving Resourcegraph GraphQuery %q (Resource Group %q): %+v", id.Name, id.ResourceGroup, err)
 	}
+	d.Set("name", id.Name)
 	d.Set("resource_group_name", id.ResourceGroup)
-	d.Set("resource_name", id.ResourceName)
-	if name := resp.Name; name != nil {
-		d.Set("name", name)
-	}
-
 	if props := resp.GraphQueryProperties; props != nil {
-		d.Set("query", props.Query)
 		d.Set("description", props.Description)
-		d.Set("result_kind", props.ResultKind)
-		d.Set("time_modified", props.TimeModified.Format(time.RFC3339))
+		d.Set("query", props.Query)
 	}
 	return tags.FlattenAndSet(d, resp.Tags)
 }
@@ -154,31 +145,30 @@ func resourceArmResourceGraphGraphQueryUpdate(d *schema.ResourceData, meta inter
 	ctx, cancel := timeouts.ForUpdate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
-	resourceGroup := d.Get("resource_group_name").(string)
-	resourceName := d.Get("resource_name").(string)
+	id, err := parse.ResourceGraphGraphQueryID(d.Id())
+	if err != nil {
+		return err
+	}
 
 	body := resourcegraph.GraphQueryUpdateParameters{
 		GraphQueryPropertiesUpdateParameters: &resourcegraph.GraphQueryPropertiesUpdateParameters{
-			Description: utils.String(d.Get("description").(string)),
-			Query:       utils.String(d.Get("query").(string)),
+			Query: utils.String(d.Get("query").(string)),
 		},
-		Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
 	}
 
-	if _, err := client.Update(ctx, resourceGroup, resourceName, body); err != nil {
-		return fmt.Errorf("failure in creating/updating ResourceGraph GraphQuery (Resource Group %q / resourceName %q / body %v): %+v", resourceGroup, resourceName, body, err)
+	if d.HasChange("description") {
+		body.GraphQueryPropertiesUpdateParameters.Description = utils.String(d.Get("description").(string))
 	}
 
-	resp, err := client.Get(ctx, resourceGroup, resourceName)
-	if err != nil {
-		return fmt.Errorf("failure in ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+	if d.HasChange("tags") {
+		body.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
 	}
 
-	if resp.ID == nil || *resp.ID == "" {
-		return fmt.Errorf("cannot read ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", resourceGroup, resourceName, err)
+	js, _ := json.Marshal(body)
+	log.Printf("TESTETSETESTTEST, req body:  %s", js)
+	if _, err := client.Update(ctx, id.ResourceGroup, id.Name, body); err != nil {
+		return fmt.Errorf("updating Resourcegraph GraphQuery %q (Resource Group %q): %+v", id.Name, id.ResourceGroup, err)
 	}
-
-	d.SetId(*resp.ID)
 	return resourceArmResourceGraphGraphQueryRead(d, meta)
 }
 
@@ -192,8 +182,8 @@ func resourceArmResourceGraphGraphQueryDelete(d *schema.ResourceData, meta inter
 		return err
 	}
 
-	if _, err := client.Delete(ctx, id.ResourceGroup, id.ResourceName); err != nil {
-		return fmt.Errorf("failure in deleting ResourceGraph GraphQuery (Resource Group %q / resourceName %q): %+v", id.ResourceGroup, id.ResourceName, err)
+	if _, err := client.Delete(ctx, id.ResourceGroup, id.Name); err != nil {
+		return fmt.Errorf("deleting Resourcegraph GraphQuery %q (Resource Group %q): %+v", id.Name, id.ResourceGroup, err)
 	}
 	return nil
 }
