@@ -1,7 +1,6 @@
 package resourcegraph
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -110,8 +109,6 @@ func resourceArmResourceGraphGraphQueryCreate(d *schema.ResourceData, meta inter
 }
 
 func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("TESTETSETESTTEST Resource ID %+v ,", d.Id())
-
 	client := meta.(*clients.Client).ResourceGraph.GraphQueryClient
 	ctx, cancel := timeouts.ForRead(meta.(*clients.Client).StopContext, d)
 	defer cancel()
@@ -121,7 +118,6 @@ func resourceArmResourceGraphGraphQueryRead(d *schema.ResourceData, meta interfa
 		return err
 	}
 
-	log.Printf("TESTETSETESTTEST %+v , Name %+v,", id.ResourceGroup, id.Name)
 	resp, err := client.Get(ctx, id.ResourceGroup, id.Name)
 	if err != nil {
 		if utils.ResponseWasNotFound(resp.Response) {
@@ -164,8 +160,6 @@ func resourceArmResourceGraphGraphQueryUpdate(d *schema.ResourceData, meta inter
 		body.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
 	}
 
-	js, _ := json.Marshal(body)
-	log.Printf("TESTETSETESTTEST, req body:  %s", js)
 	if _, err := client.Update(ctx, id.ResourceGroup, id.Name, body); err != nil {
 		return fmt.Errorf("updating Resourcegraph GraphQuery %q (Resource Group %q): %+v", id.Name, id.ResourceGroup, err)
 	}

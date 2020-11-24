@@ -2,7 +2,6 @@ package parse
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 )
@@ -24,7 +23,6 @@ func (id ResourceGraphGraphQueryId) ID(subscriptionId string) string {
 }
 
 func ResourceGraphGraphQueryID(input string) (*ResourceGraphGraphQueryId, error) {
-	log.Printf("TESTETSETESTTEST Resource ID %+v ,", input)
 	id, err := azure.ParseAzureResourceID(input)
 	if err != nil {
 		return nil, fmt.Errorf("parsing resourceGraphGraphQuery ID %q: %+v", input, err)

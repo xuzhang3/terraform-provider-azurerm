@@ -45,10 +45,6 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `name` - The Name of this Resource Graph.
 
-* `result_kind` - Enum indicating a type of graph query.
-
-* `time_modified` - Date and time in UTC of the last modification that was made to this graph query definition.
-
 ## Timeouts
 
 The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
