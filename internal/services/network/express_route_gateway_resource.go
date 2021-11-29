@@ -1,13 +1,13 @@
 package network
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/network/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
@@ -82,9 +82,9 @@ func resourceExpressRouteGatewayCreateUpdate(d *pluginsdk.ResourceData, meta int
 				return fmt.Errorf("checking for present of existing %s: %+v", id, err)
 			}
 		}
-		if resp.ID != nil && *resp.ID != "" {
-			return tf.ImportAsExistsError("azurerm_express_route_gateway", *resp.ID)
-		}
+		//if resp.ID != nil && *resp.ID != "" {
+		//	return tf.ImportAsExistsError("azurerm_express_route_gateway", *resp.ID)
+		//}
 	}
 
 	location := azure.NormalizeLocation(d.Get("location").(string))
@@ -106,6 +106,14 @@ func resourceExpressRouteGatewayCreateUpdate(d *pluginsdk.ResourceData, meta int
 		},
 		Tags: tags.Expand(t),
 	}
+
+	existing, _ := client.Get(ctx, id.ResourceGroup, id.Name)
+	if existing.ExpressRouteConnections != nil {
+		parameters.ExpressRouteGatewayProperties.ExpressRouteConnections = existing.ExpressRouteConnections
+	}
+	//TODO
+	js, _ := json.Marshal(parameters.ExpressRouteGatewayProperties.ExpressRouteConnections)
+	log.Printf("DDD  old connections %s", js)
 
 	future, err := client.CreateOrUpdate(ctx, id.ResourceGroup, id.Name, parameters)
 	if err != nil {
