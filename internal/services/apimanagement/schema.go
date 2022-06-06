@@ -1,6 +1,7 @@
 package apimanagement
 
 import (
+	"github.com/Azure/azure-sdk-for-go/services/apimanagement/mgmt/2021-08-01/apimanagement"
 	keyVaultValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/keyvault/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/suppress"
@@ -35,6 +36,18 @@ func apiManagementResourceHostnameSchema() map[string]*pluginsdk.Schema {
 			Optional:     true,
 			Sensitive:    true,
 			ValidateFunc: validation.StringIsNotEmpty,
+		},
+
+		"certificate_source": {
+			Type:      pluginsdk.TypeString,
+			Optional:  true,
+			Sensitive: true,
+			ValidateFunc: validation.StringInSlice([]string{
+				string(apimanagement.CertificateSourceBuiltIn),
+				string(apimanagement.CertificateSourceCustom),
+				string(apimanagement.CertificateSourceKeyVault),
+				string(apimanagement.CertificateSourceManaged),
+			}, false),
 		},
 
 		"negotiate_client_certificate": {

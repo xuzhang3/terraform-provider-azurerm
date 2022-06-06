@@ -214,6 +214,12 @@ func resourceApiManagementSchema() map[string]*pluginsdk.Schema {
 						ValidateFunc: azure.ValidateResourceID,
 					},
 
+					"disable_gateway": {
+						Type:     pluginsdk.TypeBool,
+						Optional: true,
+						Default:  false,
+					},
+
 					"private_ip_addresses": {
 						Type: pluginsdk.TypeList,
 						Elem: &pluginsdk.Schema{
