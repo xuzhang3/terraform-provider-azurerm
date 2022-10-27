@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/storagecache/mgmt/2021-09-01/storagecache"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/identity"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/keyvault/client"
 	keyVaultParse "github.com/hashicorp/terraform-provider-azurerm/internal/services/keyvault/parse"
 	keyVaultValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/keyvault/validate"
-	msiparse "github.com/hashicorp/terraform-provider-azurerm/internal/services/msi/parse"
 	resourcesClient "github.com/hashicorp/terraform-provider-azurerm/internal/services/resource/client"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
@@ -156,6 +156,10 @@ func resourceHPCCacheCreateOrUpdate(d *pluginsdk.ResourceData, meta interface{})
 			// It is by design that `automatically_rotate_key_to_latest_enabled` changes to `false` when `key_vault_key_id` is changed, needs to do an additional update to set it back
 			requireAdditionalUpdate = true
 		}
+		// For new created resource `automatically_rotate_key_to_latest_enabled` needs an additional update to set it to true to.
+		if d.IsNewResource() && autoKeyRotationEnabled {
+			requireAdditionalUpdate = true
+		}
 
 		keyVaultKeyId := v.(string)
 		keyVaultDetails, err := storageCacheRetrieveKeyVault(ctx, keyVaultsClient, resourcesClient, keyVaultKeyId)
@@ -241,6 +245,13 @@ func resourceHPCCacheCreateOrUpdate(d *pluginsdk.ResourceData, meta interface{})
 	}
 
 	d.SetId(id.ID())
+
+	// wait for HPC Cache provision state to be succeeded. or further operations with it may fail.
+	cacheClient := meta.(*clients.Client).HPCCache.CachesClient
+	_, err = resourceHPCCacheWaitForCreating(ctx, cacheClient, resourceGroup, name, d)
+	if err != nil {
+		return fmt.Errorf("waiting for the HPC Cache provision state %s (Resource Group: %s) : %+v", name, resourceGroup, err)
+	}
 
 	return resourceHPCCacheRead(d, meta)
 }
@@ -741,7 +752,7 @@ func flattenStorageCacheIdentity(input *storagecache.CacheIdentity) (*[]interfac
 	if input != nil {
 		identityIds := map[string]identity.UserAssignedIdentityDetails{}
 		for id := range input.UserAssignedIdentities {
-			parsedId, err := msiparse.UserAssignedIdentityIDInsensitively(id)
+			parsedId, err := commonids.ParseUserAssignedIdentityIDInsensitively(id)
 			if err != nil {
 				return nil, err
 			}
@@ -826,9 +837,9 @@ func resourceHPCCacheSchema() map[string]*pluginsdk.Schema {
 			ValidateFunc: validation.StringIsNotEmpty,
 		},
 
-		"resource_group_name": azure.SchemaResourceGroupName(),
+		"resource_group_name": commonschema.ResourceGroupName(),
 
-		"location": azure.SchemaLocation(),
+		"location": commonschema.Location(),
 
 		"cache_size_in_gb": {
 			Type:     pluginsdk.TypeInt,

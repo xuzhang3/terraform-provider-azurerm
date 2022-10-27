@@ -3,16 +3,61 @@ subcategory: "Network"
 layout: "azurerm"
 page_title: "Azure Resource Manager: azurerm_frontdoor_rules_engine"
 description: |-
-  Manages an Azure Front Door Rules Engine configuration and rules.
+  Manages an Azure Front Door (classic) Rules Engine configuration and rules.
 ---
 
 # azurerm_frontdoor_rules_engine
 
-Manages an Azure Front Door Rules Engine configuration and rules.
+Manages an Azure Front Door (classic) Rules Engine configuration and rules.
+
+!> **IMPORTANT** This resource deploys an Azure Front Door (classic) resource which is being deprecated in v4.0 of the AzureRM Provider. Please migrate your existing Azure Front Door (classic) deployments to the new [Azure Front Door (standard/premium) resources](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/cdn_frontdoor_endpoint).
 
 ## Example Usage
 
 ```hcl
+resource "azurerm_resource_group" "example" {
+  name     = "example-rg"
+  location = "West Europe"
+}
+
+resource "azurerm_frontdoor" "example" {
+  name                = "example"
+  resource_group_name = azurerm_resource_group.example.name
+
+  backend_pool {
+    name                = "exampleBackendBing"
+    load_balancing_name = "exampleLoadBalancingSettings1"
+    health_probe_name   = "exampleHealthProbeSetting1"
+
+    backend {
+      host_header = "www.bing.com"
+      address     = "www.bing.com"
+      http_port   = 80
+      https_port  = 443
+    }
+  }
+
+  backend_pool_health_probe {
+    name = "exampleHealthProbeSetting1"
+  }
+
+  backend_pool_load_balancing {
+    name = "exampleLoadBalancingSettings1"
+  }
+
+  frontend_endpoint {
+    name      = "exampleFrontendEndpoint1"
+    host_name = "example-FrontDoor.azurefd.net"
+  }
+
+  routing_rule {
+    name               = "exampleRoutingRule1"
+    accepted_protocols = ["Http", "Https"]
+    patterns_to_match  = ["/*"]
+    frontend_endpoints = ["exampleFrontendEndpoint1"]
+  }
+}
+
 resource "azurerm_frontdoor_rules_engine" "example_rules_engine" {
   name                = "exampleRulesEngineConfig1"
   frontdoor_name      = azurerm_frontdoor.example.name

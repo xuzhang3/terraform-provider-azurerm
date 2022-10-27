@@ -8,10 +8,9 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/sql/mgmt/v5.0/sql"
 	"github.com/gofrs/uuid"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/features"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/sql/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/validation"
@@ -26,7 +25,7 @@ func resourceSqlAdministrator() *pluginsdk.Resource {
 		Update: resourceSqlActiveDirectoryAdministratorCreateUpdate,
 		Delete: resourceSqlActiveDirectoryAdministratorDelete,
 
-		DeprecationMessage: features.DeprecatedInThreePointOh("The `azurerm_sql_active_directory_administrator` resource is deprecated and will be removed in version 4.0 of the AzureRM provider. Please use the `azuread_administrator` block of the `azurerm_mssql_server` resource instead."),
+		DeprecationMessage: "The `azurerm_sql_active_directory_administrator` resource is deprecated and will be removed in version 4.0 of the AzureRM provider. Please use the `azuread_administrator` block of the `azurerm_mssql_server` resource instead.",
 
 		Importer: pluginsdk.ImporterValidatingResourceId(func(id string) error {
 			_, err := parse.AzureActiveDirectoryAdministratorID(id)
@@ -47,7 +46,7 @@ func resourceSqlAdministrator() *pluginsdk.Resource {
 				ForceNew: true,
 			},
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
 			"login": {
 				Type:     pluginsdk.TypeString,

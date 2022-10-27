@@ -42,7 +42,8 @@ func resourceKeyVaultKey() *pluginsdk.Resource {
 
 		Timeouts: &pluginsdk.ResourceTimeout{
 			Create: pluginsdk.DefaultTimeout(30 * time.Minute),
-			Read:   pluginsdk.DefaultTimeout(5 * time.Minute),
+			// TODO: Change this back to 5min, once https://github.com/hashicorp/terraform-provider-azurerm/issues/11059 is addressed.
+			Read:   pluginsdk.DefaultTimeout(30 * time.Minute),
 			Update: pluginsdk.DefaultTimeout(30 * time.Minute),
 			Delete: pluginsdk.DefaultTimeout(30 * time.Minute),
 		},
@@ -69,8 +70,6 @@ func resourceKeyVaultKey() *pluginsdk.Resource {
 				// turns out Azure's *really* sensitive about the casing of these
 				// issue: https://github.com/Azure/azure-rest-api-specs/issues/1739
 				ValidateFunc: validation.StringInSlice([]string{
-					// TODO: add `oct` back in once this is fixed
-					// https://github.com/Azure/azure-rest-api-specs/issues/1739#issuecomment-332236257
 					string(keyvault.EC),
 					string(keyvault.ECHSM),
 					string(keyvault.RSA),
@@ -175,6 +174,16 @@ func resourceKeyVaultKey() *pluginsdk.Resource {
 			},
 
 			"public_key_openssh": {
+				Type:     pluginsdk.TypeString,
+				Computed: true,
+			},
+
+			"resource_id": {
+				Type:     pluginsdk.TypeString,
+				Computed: true,
+			},
+
+			"resource_versionless_id": {
 				Type:     pluginsdk.TypeString,
 				Computed: true,
 			},
@@ -491,6 +500,9 @@ func resourceKeyVaultKeyRead(d *pluginsdk.ResourceData, meta interface{}) error 
 			}
 		}
 	}
+
+	d.Set("resource_id", parse.NewKeyID(keyVaultId.SubscriptionId, keyVaultId.ResourceGroup, keyVaultId.Name, id.Name, id.Version).ID())
+	d.Set("resource_versionless_id", parse.NewKeyVersionlessID(keyVaultId.SubscriptionId, keyVaultId.ResourceGroup, keyVaultId.Name, id.Name).ID())
 
 	return tags.FlattenAndSet(d, resp.Tags)
 }

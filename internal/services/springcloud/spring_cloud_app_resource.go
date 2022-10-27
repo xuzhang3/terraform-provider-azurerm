@@ -6,11 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/preview/appplatform/mgmt/2022-03-01-preview/appplatform"
+	"github.com/Azure/azure-sdk-for-go/services/preview/appplatform/mgmt/2022-05-01-preview/appplatform"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/identity"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/springcloud/parse"
@@ -49,7 +48,7 @@ func resourceSpringCloudApp() *pluginsdk.Resource {
 				ValidateFunc: validate.SpringCloudAppName,
 			},
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
 			"service_name": {
 				Type:         pluginsdk.TypeString,
@@ -145,6 +144,11 @@ func resourceSpringCloudApp() *pluginsdk.Resource {
 				},
 			},
 
+			"public_endpoint_enabled": {
+				Type:     pluginsdk.TypeBool,
+				Optional: true,
+			},
+
 			"tls_enabled": {
 				Type:     pluginsdk.TypeBool,
 				Optional: true,
@@ -220,6 +224,12 @@ func resourceSpringCloudAppCreate(d *pluginsdk.ResourceData, meta interface{}) e
 	// HTTPSOnly and PersistentDisk could only be set by update
 	app.Properties.HTTPSOnly = utils.Bool(d.Get("https_only").(bool))
 	app.Properties.PersistentDisk = expandSpringCloudAppPersistentDisk(d.Get("persistent_disk").([]interface{}))
+	// VNetAddons.PublicEndpoint could only be set by update
+	if enabled := d.Get("public_endpoint_enabled").(bool); enabled {
+		app.Properties.VnetAddons = &appplatform.AppVNetAddons{
+			PublicEndpoint: utils.Bool(enabled),
+		}
+	}
 	future, err = client.CreateOrUpdate(ctx, id.ResourceGroup, id.SpringName, id.AppName, app)
 	if err != nil {
 		return fmt.Errorf("update %q: %+v", id, err)
@@ -262,6 +272,11 @@ func resourceSpringCloudAppUpdate(d *pluginsdk.ResourceData, meta interface{}) e
 			PersistentDisk:        expandSpringCloudAppPersistentDisk(d.Get("persistent_disk").([]interface{})),
 			CustomPersistentDisks: expandAppCustomPersistentDiskResourceArray(d.Get("custom_persistent_disk").([]interface{}), *id),
 		},
+	}
+	if enabled := d.Get("public_endpoint_enabled").(bool); enabled {
+		app.Properties.VnetAddons = &appplatform.AppVNetAddons{
+			PublicEndpoint: utils.Bool(enabled),
+		}
 	}
 	future, err := client.CreateOrUpdate(ctx, id.ResourceGroup, id.SpringName, id.AppName, app)
 	if err != nil {
@@ -320,6 +335,9 @@ func resourceSpringCloudAppRead(d *pluginsdk.ResourceData, meta interface{}) err
 		}
 		if err := d.Set("custom_persistent_disk", flattenAppCustomPersistentDiskResourceArray(prop.CustomPersistentDisks)); err != nil {
 			return fmt.Errorf("setting `custom_persistent_disk`: %+v", err)
+		}
+		if prop.VnetAddons != nil {
+			d.Set("public_endpoint_enabled", prop.VnetAddons.PublicEndpoint)
 		}
 	}
 

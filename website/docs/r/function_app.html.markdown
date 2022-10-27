@@ -275,7 +275,7 @@ The following arguments are supported:
 
 -> **NOTE** User has to explicitly set `ip_restriction` to empty slice (`[]`) to remove it.
 
-* `java_version` - (Optional) Java version hosted by the function app in Azure. Possible values are `1.8`, `11`.
+* `java_version` - (Optional) Java version hosted by the function app in Azure. Possible values are `1.8`, `11` & `17` (In-Preview).
 
 * `linux_fx_version` - (Optional) Linux App Framework and version for the AppService, e.g. `DOCKER|(golang:latest)`.
 
@@ -514,7 +514,7 @@ The `site_credential` block exports the following:
 
 ## Timeouts
 
-The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/language/resources/syntax#operation-timeouts) for certain actions:
 
 * `create` - (Defaults to 30 minutes) Used when creating the Function App.
 * `update` - (Defaults to 30 minutes) Used when updating the Function App.

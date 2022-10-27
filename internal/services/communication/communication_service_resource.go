@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/response"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/location"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/tags"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/communication/2020-08-20/communicationservice"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/services/communication/migration"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/communication/validate"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/validation"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/timeouts"
@@ -38,6 +39,11 @@ func resourceArmCommunicationService() *pluginsdk.Resource {
 			return err
 		}),
 
+		SchemaVersion: 1,
+		StateUpgraders: pluginsdk.StateUpgrades(map[int]pluginsdk.StateUpgrade{
+			0: migration.ServiceV0ToV1{},
+		}),
+
 		Schema: map[string]*pluginsdk.Schema{
 			"name": {
 				Type:         pluginsdk.TypeString,
@@ -46,7 +52,7 @@ func resourceArmCommunicationService() *pluginsdk.Resource {
 				ValidateFunc: validate.CommunicationServiceName,
 			},
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
 			"data_location": {
 				Type: pluginsdk.TypeString,
@@ -62,7 +68,7 @@ func resourceArmCommunicationService() *pluginsdk.Resource {
 				}, false),
 			},
 
-			"tags": tags.Schema(),
+			"tags": commonschema.Tags(),
 
 			"primary_connection_string": {
 				Type:     pluginsdk.TypeString,
@@ -93,10 +99,7 @@ func resourceArmCommunicationServiceCreateUpdate(d *pluginsdk.ResourceData, meta
 	ctx, cancel := timeouts.ForCreateUpdate(meta.(*clients.Client).StopContext, d)
 	defer cancel()
 
-	name := d.Get("name").(string)
-	resourceGroup := d.Get("resource_group_name").(string)
-
-	id := communicationservice.NewCommunicationServiceID(subscriptionId, resourceGroup, name)
+	id := communicationservice.NewCommunicationServiceID(subscriptionId, d.Get("resource_group_name").(string), d.Get("name").(string))
 	if d.IsNewResource() {
 		existing, err := client.Get(ctx, id)
 		if err != nil {
@@ -116,7 +119,7 @@ func resourceArmCommunicationServiceCreateUpdate(d *pluginsdk.ResourceData, meta
 		Properties: &communicationservice.CommunicationServiceProperties{
 			DataLocation: d.Get("data_location").(string),
 		},
-		Tags: expandTags(d.Get("tags").(map[string]interface{})),
+		Tags: tags.Expand(d.Get("tags").(map[string]interface{})),
 	}
 
 	if err := client.CreateOrUpdateThenPoll(ctx, id, parameter); err != nil {
@@ -162,7 +165,7 @@ func resourceArmCommunicationServiceRead(d *pluginsdk.ResourceData, meta interfa
 			d.Set("data_location", props.DataLocation)
 		}
 
-		if err := tags.FlattenAndSet(d, flattenTags(model.Tags)); err != nil {
+		if err := tags.FlattenAndSet(d, model.Tags); err != nil {
 			return err
 		}
 	}

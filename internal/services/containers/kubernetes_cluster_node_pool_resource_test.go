@@ -8,10 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-azure-sdk/resource-manager/containerservice/2022-08-02-preview/agentpools"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/containerservice/2022-08-02-preview/managedclusters"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/acceptance/check"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/services/containers/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/utils"
 )
@@ -89,6 +90,21 @@ func TestAccKubernetesClusterNodePool_availabilityZones(t *testing.T) {
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
 			Config: r.availabilityZonesConfig(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccKubernetesClusterNodePool_capacityReservationGroup(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.capacityReservationGroup(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -600,6 +616,38 @@ func TestAccKubernetesClusterNodePool_windows(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesClusterNodePool_windows2019(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.windows2019Config(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("tags.Os").HasValue("Windows"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccKubernetesClusterNodePool_windows2022(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.windows2022Config(data),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("tags.Os").HasValue("Windows"),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
 func TestAccKubernetesClusterNodePool_windowsAndLinux(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
 	r := KubernetesClusterNodePoolResource{}
@@ -707,13 +755,58 @@ func TestAccKubernetesClusterNodePool_ultraSSD(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterNodePool_osSku(t *testing.T) {
+func TestAccKubernetesClusterNodePool_osSkuUbuntu(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
 	r := KubernetesClusterNodePoolResource{}
 
 	data.ResourceTest(t, r, []acceptance.TestStep{
 		{
-			Config: r.osSku(data),
+			Config: r.osSku(data, "Ubuntu"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccKubernetesClusterNodePool_osSkuCBLMariner(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.osSku(data, "CBLMariner"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccKubernetesClusterNodePool_osSkuMariner(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.osSku(data, "Mariner"),
+			Check: acceptance.ComposeTestCheckFunc(
+				check.That(data.ResourceName).ExistsInAzure(r),
+			),
+		},
+		data.ImportStep(),
+	})
+}
+
+func TestAccKubernetesClusterNodePool_dedicatedHost(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azurerm_kubernetes_cluster_node_pool", "test")
+	r := KubernetesClusterNodePoolResource{}
+
+	data.ResourceTest(t, r, []acceptance.TestStep{
+		{
+			Config: r.dedicatedHost(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 			),
@@ -789,52 +882,53 @@ func TestAccKubernetesClusterNodePool_workloadRuntime(t *testing.T) {
 }
 
 func (t KubernetesClusterNodePoolResource) Exists(ctx context.Context, clients *clients.Client, state *pluginsdk.InstanceState) (*bool, error) {
-	id, err := parse.NodePoolID(state.ID)
+	id, err := agentpools.ParseAgentPoolID(state.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := clients.Containers.AgentPoolsClient.Get(ctx, id.ResourceGroup, id.ManagedClusterName, id.AgentPoolName)
+	resp, err := clients.Containers.AgentPoolsClient.Get(ctx, *id)
 	if err != nil {
 		return nil, fmt.Errorf("reading Kubernetes Cluster Node Pool (%s): %+v", id.String(), err)
 	}
 
-	return utils.Bool(resp.ID != nil), nil
+	return utils.Bool(resp.Model != nil && resp.Model.Id != nil), nil
 }
 
 func (KubernetesClusterNodePoolResource) scaleNodePool(nodeCount int) acceptance.ClientCheckFunc {
 	return func(ctx context.Context, clients *clients.Client, state *pluginsdk.InstanceState) error {
 		nodePoolName := state.Attributes["name"]
 		kubernetesClusterId := state.Attributes["kubernetes_cluster_id"]
-		parsedK8sId, err := parse.ClusterID(kubernetesClusterId)
+		parsedK8sId, err := managedclusters.ParseManagedClusterID(kubernetesClusterId)
 		if err != nil {
 			return fmt.Errorf("parsing kubernetes cluster id: %+v", err)
 		}
+		parsedAgentPoolId := agentpools.NewAgentPoolID(parsedK8sId.SubscriptionId, parsedK8sId.ResourceGroupName, parsedK8sId.ResourceName, nodePoolName)
 
-		clusterName := parsedK8sId.ManagedClusterName
-		resourceGroup := parsedK8sId.ResourceGroup
+		clusterName := parsedK8sId.ResourceName
+		resourceGroup := parsedK8sId.ResourceGroupName
 
-		nodePool, err := clients.Containers.AgentPoolsClient.Get(ctx, resourceGroup, clusterName, nodePoolName)
+		nodePool, err := clients.Containers.AgentPoolsClient.Get(ctx, parsedAgentPoolId)
 		if err != nil {
 			return fmt.Errorf("Bad: Get on agentPoolsClient: %+v", err)
 		}
 
-		if nodePool.StatusCode == http.StatusNotFound {
+		if nodePool.HttpResponse.StatusCode == http.StatusNotFound {
 			return fmt.Errorf("Bad: Node Pool %q (Kubernetes Cluster %q / Resource Group: %q) does not exist", nodePoolName, clusterName, resourceGroup)
 		}
 
-		if nodePool.ManagedClusterAgentPoolProfileProperties == nil {
+		if nodePool.Model == nil || nodePool.Model.Properties == nil {
 			return fmt.Errorf("Bad: Node Pool %q (Kubernetes Cluster %q / Resource Group: %q): `properties` was nil", nodePoolName, clusterName, resourceGroup)
 		}
 
-		nodePool.ManagedClusterAgentPoolProfileProperties.Count = utils.Int32(int32(nodeCount))
+		nodePool.Model.Properties.Count = utils.Int64(int64(nodeCount))
 
-		future, err := clients.Containers.AgentPoolsClient.CreateOrUpdate(ctx, resourceGroup, clusterName, nodePoolName, nodePool)
+		future, err := clients.Containers.AgentPoolsClient.CreateOrUpdate(ctx, parsedAgentPoolId, *nodePool.Model)
 		if err != nil {
 			return fmt.Errorf("Bad: updating node pool %q: %+v", nodePoolName, err)
 		}
 
-		if err := future.WaitForCompletionRef(ctx, clients.Containers.AgentPoolsClient.Client); err != nil {
+		if err := future.Poller.PollUntilDone(); err != nil {
 			return fmt.Errorf("Bad: waiting for update of node pool %q: %+v", nodePoolName, err)
 		}
 
@@ -1116,6 +1210,77 @@ resource "azurerm_kubernetes_cluster_node_pool" "test" {
   zones                 = ["1"]
 }
 `, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomInteger, data.RandomInteger, data.RandomInteger)
+}
+
+func (KubernetesClusterNodePoolResource) capacityReservationGroup(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-aks-%[1]d"
+  location = "%[2]s"
+}
+
+resource "azurerm_capacity_reservation_group" "test" {
+  name                = "acctest-ccrg-%[1]d"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+}
+
+resource "azurerm_capacity_reservation" "test" {
+  name                          = "acctest-ccr-%[1]d"
+  capacity_reservation_group_id = azurerm_capacity_reservation_group.test.id
+
+  sku {
+    name     = "Standard_D2s_v3"
+    capacity = 2
+  }
+}
+
+resource "azurerm_user_assigned_identity" "test" {
+  name                = "acctest%[1]d"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+}
+
+resource "azurerm_role_assignment" "test" {
+  scope                = azurerm_capacity_reservation_group.test.id
+  principal_id         = azurerm_user_assigned_identity.test.principal_id
+  role_definition_name = "Owner"
+}
+
+resource "azurerm_kubernetes_cluster" "test" {
+  name                = "acctestaks%[1]d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  dns_prefix          = "acctestaks%[1]d"
+  default_node_pool {
+    name                          = "default"
+    node_count                    = 1
+    vm_size                       = "Standard_D2s_v3"
+    capacity_reservation_group_id = azurerm_capacity_reservation.test.capacity_reservation_group_id
+  }
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.test.id]
+  }
+
+  depends_on = [
+    azurerm_capacity_reservation.test,
+    azurerm_role_assignment.test
+  ]
+}
+resource "azurerm_kubernetes_cluster_node_pool" "test" {
+  name                          = "internal"
+  kubernetes_cluster_id         = azurerm_kubernetes_cluster.test.id
+  vm_size                       = "Standard_D2s_v3"
+  node_count                    = 1
+  capacity_reservation_group_id = azurerm_capacity_reservation.test.capacity_reservation_group_id
+}
+`, data.RandomInteger, data.Locations.Primary)
 }
 
 func (r KubernetesClusterNodePoolResource) manualScaleConfig(data acceptance.TestData) string {
@@ -1671,6 +1836,52 @@ resource "azurerm_kubernetes_cluster_node_pool" "test" {
 `, r.templateWindowsConfig(data))
 }
 
+func (r KubernetesClusterNodePoolResource) windows2019Config(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+%s
+
+resource "azurerm_kubernetes_cluster_node_pool" "test" {
+  name                  = "windoz"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
+  vm_size               = "Standard_DS2_v2"
+  node_count            = 1
+  os_type               = "Windows"
+  os_sku                = "Windows2019"
+
+  tags = {
+    Os = "Windows"
+  }
+}
+`, r.templateWindowsConfig(data))
+}
+
+func (r KubernetesClusterNodePoolResource) windows2022Config(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+%s
+
+resource "azurerm_kubernetes_cluster_node_pool" "test" {
+  name                  = "windoz"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
+  vm_size               = "Standard_DS2_v2"
+  node_count            = 1
+  os_type               = "Windows"
+  os_sku                = "Windows2022"
+
+  tags = {
+    Os = "Windows"
+  }
+}
+`, r.templateWindowsConfig(data))
+}
+
 func (r KubernetesClusterNodePoolResource) windowsAndLinuxConfig(data acceptance.TestData) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
@@ -1895,6 +2106,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "test" {
   node_count            = 3
   fips_enabled          = true
   kubelet_disk_type     = "OS"
+  message_of_the_day    = "daily message"
 }
 `, r.templateConfig(data))
 }
@@ -1932,7 +2144,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "test" {
 `, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomInteger, ultraSSDEnabled)
 }
 
-func (KubernetesClusterNodePoolResource) osSku(data acceptance.TestData) string {
+func (KubernetesClusterNodePoolResource) osSku(data acceptance.TestData, osSku string) string {
 	return fmt.Sprintf(`
 provider "azurerm" {
   features {}
@@ -1959,9 +2171,80 @@ resource "azurerm_kubernetes_cluster_node_pool" "test" {
   name                  = "internal"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
   vm_size               = "Standard_D2s_v3"
-  os_sku                = "Ubuntu"
+  os_sku                = "%s"
 }
-`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomInteger)
+`, data.RandomInteger, data.Locations.Primary, data.RandomInteger, data.RandomInteger, osSku)
+}
+
+func (KubernetesClusterNodePoolResource) dedicatedHost(data acceptance.TestData) string {
+	return fmt.Sprintf(`
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-aks-%[1]d"
+  location = "%[2]s"
+}
+
+resource "azurerm_dedicated_host_group" "test" {
+  name                        = "acctestDHG-compute-%[1]d"
+  resource_group_name         = azurerm_resource_group.test.name
+  location                    = azurerm_resource_group.test.location
+  platform_fault_domain_count = 3
+  automatic_placement_enabled = true
+}
+
+resource "azurerm_dedicated_host" "test" {
+  name                    = "acctest-DH-%[1]d"
+  location                = azurerm_resource_group.test.location
+  dedicated_host_group_id = azurerm_dedicated_host_group.test.id
+  sku_name                = "DSv3-Type1"
+  platform_fault_domain   = 0
+}
+
+resource "azurerm_user_assigned_identity" "test" {
+  name                = "acctest%[2]s"
+  resource_group_name = azurerm_resource_group.test.name
+  location            = azurerm_resource_group.test.location
+}
+
+resource "azurerm_role_assignment" "test" {
+  scope                = azurerm_resource_group.test.id
+  principal_id         = azurerm_user_assigned_identity.test.principal_id
+  role_definition_name = "Contributor"
+}
+
+resource "azurerm_kubernetes_cluster" "test" {
+  name                = "acctestaks%[1]d"
+  location            = azurerm_resource_group.test.location
+  resource_group_name = azurerm_resource_group.test.name
+  dns_prefix          = "acctestaks%[1]d"
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2s_v3"
+  }
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.test.id]
+  }
+
+  depends_on = [
+    azurerm_role_assignment.test
+  ]
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "test" {
+  name                  = "internal"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.test.id
+  vm_size               = "Standard_DS2_v2"
+  node_count            = 1
+  host_group_id         = azurerm_dedicated_host_group.test.id
+}
+`, data.RandomInteger, data.Locations.Primary)
 }
 
 func (r KubernetesClusterNodePoolResource) nodePool(data acceptance.TestData, enableAutoScaling bool, minCount, maxCount int) string {

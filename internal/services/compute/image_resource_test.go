@@ -64,30 +64,6 @@ func TestAccImage_standaloneImage_hyperVGeneration_V2(t *testing.T) {
 	})
 }
 
-func TestAccImage_standaloneImageZoneRedundant(t *testing.T) {
-	data := acceptance.BuildTestData(t, "azurerm_image", "test")
-	r := ImageResource{}
-
-	data.ResourceTest(t, r, []acceptance.TestStep{
-		{
-			// need to create a vm and then reference it in the image creation
-			Config:  r.setupUnmanagedDisks(data, "ZRS"),
-			Destroy: false,
-			Check: acceptance.ComposeTestCheckFunc(
-				data.CheckWithClientForResource(r.virtualMachineExists, "azurerm_virtual_machine.testsource"),
-				data.CheckWithClientForResource(r.generalizeVirtualMachine(data), "azurerm_virtual_machine.testsource"),
-			),
-		},
-		{
-			Config: r.standaloneImageProvision(data, "ZRS", ""),
-			Check: acceptance.ComposeTestCheckFunc(
-				check.That("azurerm_image.test").ExistsInAzure(r),
-			),
-		},
-		data.ImportStep(),
-	})
-}
-
 func TestAccImage_requiresImport(t *testing.T) {
 	data := acceptance.BuildTestData(t, "azurerm_image", "test")
 	r := ImageResource{}
@@ -401,7 +377,14 @@ func (r ImageResource) setupUnmanagedDisks(data acceptance.TestData, storageType
 	template := r.template(data)
 	return fmt.Sprintf(`
 provider "azurerm" {
-  features {}
+  features {
+    key_vault {
+      recover_soft_deleted_key_vaults       = false
+      purge_soft_delete_on_destroy          = false
+      purge_soft_deleted_keys_on_destroy    = false
+      purge_soft_deleted_secrets_on_destroy = false
+    }
+  }
 }
 
 %s

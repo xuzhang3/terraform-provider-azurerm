@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/digitaltwins/mgmt/2020-12-01/digitaltwins"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/identity"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/location"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/digitaltwins/parse"
@@ -45,14 +46,16 @@ func resourceDigitalTwinsInstance() *pluginsdk.Resource {
 				ValidateFunc: validate.DigitalTwinsInstanceName,
 			},
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
-			"location": azure.SchemaLocation(),
+			"location": commonschema.Location(),
 
 			"host_name": {
 				Type:     pluginsdk.TypeString,
 				Computed: true,
 			},
+
+			"identity": commonschema.SystemAssignedIdentityOptional(),
 
 			"tags": tags.Schema(),
 		},
@@ -80,8 +83,14 @@ func resourceDigitalTwinsInstanceCreate(d *pluginsdk.ResourceData, meta interfac
 		return tf.ImportAsExistsError("azurerm_digital_twins_instance", id)
 	}
 
+	expandedIdentity, err := expandDigitalTwinsInstanceIdentity(d.Get("identity").([]interface{}))
+	if err != nil {
+		return fmt.Errorf("expanding `identity`: %+v", err)
+	}
+
 	properties := digitaltwins.Description{
 		Location: utils.String(location.Normalize(d.Get("location").(string))),
+		Identity: expandedIdentity,
 		Tags:     tags.Expand(d.Get("tags").(map[string]interface{})),
 	}
 
@@ -130,6 +139,10 @@ func resourceDigitalTwinsInstanceRead(d *pluginsdk.ResourceData, meta interface{
 		d.Set("host_name", props.HostName)
 	}
 
+	if err := d.Set("identity", flattenDigitalTwinsInstanceIdentity(resp.Identity)); err != nil {
+		return fmt.Errorf("setting `identity`: %+v", err)
+	}
+
 	return tags.FlattenAndSet(d, resp.Tags)
 }
 
@@ -144,6 +157,14 @@ func resourceDigitalTwinsInstanceUpdate(d *pluginsdk.ResourceData, meta interfac
 	}
 
 	props := digitaltwins.PatchDescription{}
+
+	if d.HasChange("identity") {
+		expandedIdentity, err := expandDigitalTwinsInstanceIdentity(d.Get("identity").([]interface{}))
+		if err != nil {
+			return fmt.Errorf("expanding `identity`: %+v", err)
+		}
+		props.Identity = expandedIdentity
+	}
 
 	if d.HasChange("tags") {
 		props.Tags = tags.Expand(d.Get("tags").(map[string]interface{}))
@@ -181,4 +202,35 @@ func resourceDigitalTwinsInstanceDelete(d *pluginsdk.ResourceData, meta interfac
 	}
 
 	return nil
+}
+
+func expandDigitalTwinsInstanceIdentity(input []interface{}) (*digitaltwins.Identity, error) {
+	expanded, err := identity.ExpandSystemAssigned(input)
+	if err != nil {
+		return nil, err
+	}
+
+	result := digitaltwins.Identity{
+		Type: digitaltwins.IdentityType(expanded.Type),
+	}
+
+	return &result, nil
+}
+
+func flattenDigitalTwinsInstanceIdentity(input *digitaltwins.Identity) []interface{} {
+	var transform *identity.SystemAssigned
+
+	if input != nil {
+		transform = &identity.SystemAssigned{
+			Type: identity.Type(string(input.Type)),
+		}
+		if input.PrincipalID != nil {
+			transform.PrincipalId = *input.PrincipalID
+		}
+		if input.TenantID != nil {
+			transform.TenantId = *input.TenantID
+		}
+	}
+
+	return identity.FlattenSystemAssigned(transform)
 }

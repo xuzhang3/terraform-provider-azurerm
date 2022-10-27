@@ -30,6 +30,7 @@ type LinuxWebAppDataSourceModel struct {
 	ClientAffinityEnabled         bool                       `tfschema:"client_affinity_enabled"`
 	ClientCertEnabled             bool                       `tfschema:"client_certificate_enabled"`
 	ClientCertMode                string                     `tfschema:"client_certificate_mode"`
+	ClientCertExclusionPaths      string                     `tfschema:"client_certificate_exclusion_paths"`
 	Enabled                       bool                       `tfschema:"enabled"`
 	HttpsOnly                     bool                       `tfschema:"https_only"`
 	KeyVaultReferenceIdentityID   string                     `tfschema:"key_vault_reference_identity_id"`
@@ -48,6 +49,7 @@ type LinuxWebAppDataSourceModel struct {
 	PossibleOutboundIPAddresses   string                     `tfschema:"possible_outbound_ip_addresses"`
 	PossibleOutboundIPAddressList []string                   `tfschema:"possible_outbound_ip_address_list"`
 	SiteCredentials               []helpers.SiteCredential   `tfschema:"site_credential"`
+	VirtualNetworkSubnetID        string                     `tfschema:"virtual_network_subnet_id"`
 }
 
 var _ sdk.DataSource = LinuxWebAppDataSource{}
@@ -109,6 +111,12 @@ func (r LinuxWebAppDataSource) Attributes() map[string]*pluginsdk.Schema {
 		"client_certificate_mode": {
 			Type:     pluginsdk.TypeString,
 			Computed: true,
+		},
+
+		"client_certificate_exclusion_paths": {
+			Type:        pluginsdk.TypeString,
+			Computed:    true,
+			Description: "Paths to exclude when using client certificates, separated by ;",
 		},
 
 		"connection_string": helpers.ConnectionStringSchemaComputed(),
@@ -188,6 +196,11 @@ func (r LinuxWebAppDataSource) Attributes() map[string]*pluginsdk.Schema {
 		"sticky_settings": helpers.StickySettingsComputedSchema(),
 
 		"tags": tags.SchemaDataSource(),
+
+		"virtual_network_subnet_id": {
+			Type:     pluginsdk.TypeString,
+			Computed: true,
+		},
 	}
 }
 
@@ -281,6 +294,7 @@ func (r LinuxWebAppDataSource) Read() sdk.ResourceFunc {
 					webApp.ClientCertEnabled = *props.ClientCertEnabled
 				}
 				webApp.ClientCertMode = string(props.ClientCertMode)
+				webApp.ClientCertExclusionPaths = utils.NormalizeNilableString(props.ClientCertExclusionPaths)
 				webApp.CustomDomainVerificationId = utils.NormalizeNilableString(props.CustomDomainVerificationID)
 				webApp.DefaultHostname = utils.NormalizeNilableString(props.DefaultHostName)
 				if props.Enabled != nil {

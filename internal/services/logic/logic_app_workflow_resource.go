@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/logic/mgmt/2019-05-01/logic"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonids"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/identity"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/internal/locks"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/logic/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/logic/validate"
-	msiParser "github.com/hashicorp/terraform-provider-azurerm/internal/services/msi/parse"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/validation"
@@ -60,9 +60,9 @@ func resourceLogicAppWorkflow() *pluginsdk.Resource {
 				),
 			},
 
-			"location": azure.SchemaLocation(),
+			"location": commonschema.Location(),
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
 			"integration_service_environment_id": {
 				Type:         pluginsdk.TypeString,
@@ -435,6 +435,12 @@ func resourceLogicAppWorkflowUpdate(d *pluginsdk.ResourceData, meta interface{})
 	if v, ok := d.GetOk("logic_app_integration_account_id"); ok {
 		properties.WorkflowProperties.IntegrationAccount = &logic.ResourceReference{
 			ID: utils.String(v.(string)),
+		}
+	}
+
+	if iseID, ok := d.GetOk("integration_service_environment_id"); ok {
+		properties.WorkflowProperties.IntegrationServiceEnvironment = &logic.ResourceReference{
+			ID: utils.String(iseID.(string)),
 		}
 	}
 
@@ -881,7 +887,7 @@ func flattenLogicAppWorkflowIdentity(input *logic.ManagedServiceIdentity) (*[]in
 	if input != nil {
 		identityIds := map[string]identity.UserAssignedIdentityDetails{}
 		for id := range input.UserAssignedIdentities {
-			parsedId, err := msiParser.UserAssignedIdentityIDInsensitively(id)
+			parsedId, err := commonids.ParseUserAssignedIdentityIDInsensitively(id)
 			if err != nil {
 				return nil, err
 			}

@@ -41,7 +41,8 @@ func resourceKeyVaultCertificate() *pluginsdk.Resource {
 
 		Timeouts: &pluginsdk.ResourceTimeout{
 			Create: pluginsdk.DefaultTimeout(60 * time.Minute),
-			Read:   pluginsdk.DefaultTimeout(5 * time.Minute),
+			// TODO: Change this back to 5min, once https://github.com/hashicorp/terraform-provider-azurerm/issues/11059 is addressed.
+			Read:   pluginsdk.DefaultTimeout(30 * time.Minute),
 			Delete: pluginsdk.DefaultTimeout(30 * time.Minute),
 			Update: pluginsdk.DefaultTimeout(30 * time.Minute),
 		},
@@ -64,7 +65,6 @@ func resourceKeyVaultCertificate() *pluginsdk.Resource {
 			"certificate": {
 				Type:     pluginsdk.TypeList,
 				Optional: true,
-				ForceNew: true,
 				AtLeastOneOf: []string{
 					"certificate_policy",
 					"certificate",
@@ -75,14 +75,12 @@ func resourceKeyVaultCertificate() *pluginsdk.Resource {
 						"contents": {
 							Type:         pluginsdk.TypeString,
 							Required:     true,
-							ForceNew:     true,
 							Sensitive:    true,
 							ValidateFunc: validation.StringIsNotEmpty,
 						},
 						"password": {
 							Type:      pluginsdk.TypeString,
 							Optional:  true,
-							ForceNew:  true,
 							Sensitive: true,
 						},
 					},
@@ -461,8 +459,14 @@ func resourceKeyVaultCertificateCreate(d *pluginsdk.ResourceData, meta interface
 			CertificatePolicy:        policy,
 			Tags:                     tags.Expand(t),
 		}
-		if _, err := client.ImportCertificate(ctx, *keyVaultBaseUrl, name, importParameters); err != nil {
-			return err
+		if resp, err := client.ImportCertificate(ctx, *keyVaultBaseUrl, name, importParameters); err != nil {
+			if meta.(*clients.Client).Features.KeyVault.RecoverSoftDeletedCerts && utils.ResponseWasConflict(resp.Response) {
+				if err = recoverDeletedCertificate(ctx, d, meta, *keyVaultBaseUrl, name); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 	} else {
 		// Generate new
@@ -472,26 +476,8 @@ func resourceKeyVaultCertificateCreate(d *pluginsdk.ResourceData, meta interface
 		}
 		if resp, err := client.CreateCertificate(ctx, *keyVaultBaseUrl, name, parameters); err != nil {
 			if meta.(*clients.Client).Features.KeyVault.RecoverSoftDeletedCerts && utils.ResponseWasConflict(resp.Response) {
-				recoveredCertificate, err := client.RecoverDeletedCertificate(ctx, *keyVaultBaseUrl, name)
-				if err != nil {
+				if err = recoverDeletedCertificate(ctx, d, meta, *keyVaultBaseUrl, name); err != nil {
 					return err
-				}
-				log.Printf("[DEBUG] Recovering Secret %q with ID: %q", name, *recoveredCertificate.ID)
-				if certificate := recoveredCertificate.ID; certificate != nil {
-					stateConf := &pluginsdk.StateChangeConf{
-						Pending:                   []string{"pending"},
-						Target:                    []string{"available"},
-						Refresh:                   keyVaultChildItemRefreshFunc(*certificate),
-						Delay:                     30 * time.Second,
-						PollInterval:              10 * time.Second,
-						ContinuousTargetOccurence: 10,
-						Timeout:                   d.Timeout(pluginsdk.TimeoutCreate),
-					}
-
-					if _, err := stateConf.WaitForStateContext(ctx); err != nil {
-						return fmt.Errorf("waiting for Key Vault Secret %q to become available: %s", name, err)
-					}
-					log.Printf("[DEBUG] Secret %q recovered with ID: %q", name, *recoveredCertificate.ID)
 				}
 			} else {
 				return err
@@ -529,6 +515,32 @@ func resourceKeyVaultCertificateCreate(d *pluginsdk.ResourceData, meta interface
 	return resourceKeyVaultCertificateRead(d, meta)
 }
 
+func recoverDeletedCertificate(ctx context.Context, d *pluginsdk.ResourceData, meta interface{}, keyVaultBaseUrl string, name string) error {
+	client := meta.(*clients.Client).KeyVault.ManagementClient
+	recoveredCertificate, err := client.RecoverDeletedCertificate(ctx, keyVaultBaseUrl, name)
+	if err != nil {
+		return err
+	}
+	log.Printf("[DEBUG] Recovering Secret %q with ID: %q", name, *recoveredCertificate.ID)
+	if certificate := recoveredCertificate.ID; certificate != nil {
+		stateConf := &pluginsdk.StateChangeConf{
+			Pending:                   []string{"pending"},
+			Target:                    []string{"available"},
+			Refresh:                   keyVaultChildItemRefreshFunc(*certificate),
+			Delay:                     30 * time.Second,
+			PollInterval:              10 * time.Second,
+			ContinuousTargetOccurence: 10,
+			Timeout:                   d.Timeout(pluginsdk.TimeoutCreate),
+		}
+
+		if _, err := stateConf.WaitForStateContext(ctx); err != nil {
+			return fmt.Errorf("waiting for Key Vault Secret %q to become available: %s", name, err)
+		}
+		log.Printf("[DEBUG] Secret %q recovered with ID: %q", name, *recoveredCertificate.ID)
+	}
+	return nil
+}
+
 func resourceKeyVaultCertificateUpdate(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*clients.Client).KeyVault.ManagementClient
 	ctx, cancel := timeouts.ForCreate(meta.(*clients.Client).StopContext, d)
@@ -538,13 +550,34 @@ func resourceKeyVaultCertificateUpdate(d *schema.ResourceData, meta interface{})
 	if err != nil {
 		return err
 	}
-	patch := keyvault.CertificateUpdateParameters{}
-	if t, ok := d.GetOk("tags"); ok {
-		patch.Tags = tags.Expand(t.(map[string]interface{}))
+
+	if d.HasChange("certificate") {
+		if v, ok := d.GetOk("certificate"); ok {
+			// Import new version of certificate
+			certificate := expandKeyVaultCertificate(v)
+			importParameters := keyvault.CertificateImportParameters{
+				Base64EncodedCertificate: utils.String(certificate.CertificateData),
+				Password:                 utils.String(certificate.CertificatePassword),
+			}
+			resp, err := client.ImportCertificate(ctx, id.KeyVaultBaseUrl, id.Name, importParameters)
+			if err != nil {
+				return err
+			}
+			if resp.ID != nil {
+				d.SetId(*resp.ID)
+			}
+		}
 	}
 
-	if _, err = client.UpdateCertificate(ctx, id.KeyVaultBaseUrl, id.Name, id.Version, patch); err != nil {
-		return err
+	if d.HasChange("tags") {
+		patch := keyvault.CertificateUpdateParameters{}
+		if t, ok := d.GetOk("tags"); ok {
+			patch.Tags = tags.Expand(t.(map[string]interface{}))
+		}
+
+		if _, err = client.UpdateCertificate(ctx, id.KeyVaultBaseUrl, id.Name, "", patch); err != nil {
+			return err
+		}
 	}
 	return resourceKeyVaultCertificateRead(d, meta)
 }

@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-azure-helpers/lang/response"
-	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/servicefabricmanagedcluster/2021-05-01/managedcluster"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/servicefabricmanagedcluster/2021-05-01/nodetype"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/sdk"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/services/servicefabricmanaged/sdk/2021-05-01/managedcluster"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/services/servicefabricmanaged/sdk/2021-05-01/nodetype"
-	"github.com/hashicorp/terraform-provider-azurerm/internal/services/servicefabricmanaged/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tags"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/validation"
@@ -138,7 +137,7 @@ func (k ClusterResource) Arguments() map[string]*pluginsdk.Schema {
 			Type:     pluginsdk.TypeBool,
 			Optional: true,
 		},
-		"location": azure.SchemaLocation(),
+		"location": commonschema.Location(),
 		"name": {
 			Type:     pluginsdk.TypeString,
 			Required: true,
@@ -312,7 +311,7 @@ func (k ClusterResource) Create() sdk.ResourceFunc {
 				}
 			}
 
-			deleteResponses := make([]nodetype.DeleteResponse, 0)
+			deleteResponses := make([]nodetype.DeleteOperationResponse, 0)
 			// Delete the old nodetypes
 			for _, nt := range toDelete {
 				resp, err := nodeTypeClient.Delete(ctx, nodetype.NewNodeTypeID(subscriptionId, model.ResourceGroup, model.Name, nt))
@@ -342,7 +341,7 @@ func (k ClusterResource) Create() sdk.ResourceFunc {
 			}
 
 			// Send all Create NodeType requests, and store all responses to a list.
-			nodeTypeResponses := make([]nodetype.CreateOrUpdateResponse, len(model.NodeTypes))
+			nodeTypeResponses := make([]nodetype.CreateOrUpdateOperationResponse, len(model.NodeTypes))
 			for idx, nt := range model.NodeTypes {
 				nodeTypeProperties, err := expandNodeTypeProperties(&nt)
 				if err != nil {
@@ -494,7 +493,7 @@ func (k ClusterResource) Update() sdk.ResourceFunc {
 				}
 			}
 
-			deleteResponses := make([]nodetype.DeleteResponse, 0)
+			deleteResponses := make([]nodetype.DeleteOperationResponse, 0)
 			// Delete the old nodetypes
 			for _, nt := range toDelete {
 				resp, err := nodeTypeClient.Delete(ctx, nodetype.NewNodeTypeID(subscriptionId, model.ResourceGroup, model.Name, nt))
@@ -524,7 +523,7 @@ func (k ClusterResource) Update() sdk.ResourceFunc {
 			}
 
 			// Send all Create NodeType requests, and store all responses to a list.
-			nodeTypeResponses := make([]nodetype.CreateOrUpdateResponse, len(model.NodeTypes))
+			nodeTypeResponses := make([]nodetype.CreateOrUpdateOperationResponse, len(model.NodeTypes))
 			for idx, nt := range model.NodeTypes {
 				nodeTypeProperties, err := expandNodeTypeProperties(&nt)
 				if err != nil {
@@ -610,7 +609,7 @@ func (k ClusterResource) CustomizeDiff() sdk.ResourceFunc {
 			for _, lbi := range rd.Get("lb_rule").([]interface{}) {
 				lb := lbi.(map[string]interface{})
 				probeProto := lb["probe_protocol"].(string)
-				if probeProto == string(managedcluster.ProbeProtocolHttp) || probeProto == string(managedcluster.ProbeProtocolHttps) {
+				if probeProto == string(managedcluster.ProbeProtocolHTTP) || probeProto == string(managedcluster.ProbeProtocolHTTPS) {
 					probePath := lb["probe_request_path"]
 					if probePath == nil || probePath.(string) == "" {
 						return fmt.Errorf("probe_request_path needs to be set if probe protocol is %q", probeProto)
@@ -646,7 +645,7 @@ func (k ClusterResource) CustomizeDiff() sdk.ResourceFunc {
 }
 
 func (k ClusterResource) IDValidationFunc() pluginsdk.SchemaValidateFunc {
-	return validate.ServiceFabricManagedClusterID
+	return managedcluster.ValidateManagedClusterID
 }
 
 func flattenClusterProperties(cluster *managedcluster.ManagedCluster) *ClusterResourceModel {
@@ -680,6 +679,7 @@ func flattenClusterProperties(cluster *managedcluster.ManagedCluster) *ClusterRe
 	model.Username = properties.AdminUserName
 
 	if aad := properties.AzureActiveDirectory; aad != nil {
+		model.Authentication = append(model.Authentication, Authentication{})
 		adModel := ADAuthentication{}
 		adModel.ClientApp = utils.NormalizeNilableString(aad.ClientApplication)
 		adModel.ClusterApp = utils.NormalizeNilableString(aad.ClusterApplication)
@@ -700,6 +700,9 @@ func flattenClusterProperties(cluster *managedcluster.ManagedCluster) *ClusterRe
 				Thumbprint:      utils.NormalizeNilableString(client.Thumbprint),
 			}
 		}
+		if len(model.Authentication) == 0 {
+			model.Authentication = append(model.Authentication, Authentication{})
+		}
 		model.Authentication[0].CertAuthentication = certs
 	}
 
@@ -708,8 +711,8 @@ func flattenClusterProperties(cluster *managedcluster.ManagedCluster) *ClusterRe
 		for _, fs := range *fss {
 			for _, param := range fs.Parameters {
 				cfs = append(cfs, CustomFabricSetting{
-					Parameter: fs.Name,
-					Section:   param.Name,
+					Section:   fs.Name,
+					Parameter: param.Name,
 					Value:     param.Value,
 				})
 			}
@@ -718,7 +721,7 @@ func flattenClusterProperties(cluster *managedcluster.ManagedCluster) *ClusterRe
 	}
 
 	model.ClientConnectionPort = utils.NormaliseNilableInt64(properties.ClientConnectionPort)
-	model.HTTPGatewayPort = utils.NormaliseNilableInt64(properties.HttpGatewayConnectionPort)
+	model.HTTPGatewayPort = utils.NormaliseNilableInt64(properties.HTTPGatewayConnectionPort)
 
 	if lbrules := properties.LoadBalancingRules; lbrules != nil {
 		model.LBRules = make([]LBRule, len(*lbrules))
@@ -862,8 +865,6 @@ func expandClusterProperties(model *ClusterResourceModel) *managedcluster.Manage
 	out.ClusterUpgradeCadence = &model.UpgradeWave
 
 	if customSettings := model.CustomFabricSettings; len(customSettings) > 0 {
-		fs := make([]managedcluster.SettingsSectionDescription, len(customSettings))
-
 		// First we build a map of all settings per section
 		fsMap := make(map[string][]managedcluster.SettingsParameterDescription)
 		for _, cs := range customSettings {
@@ -875,6 +876,7 @@ func expandClusterProperties(model *ClusterResourceModel) *managedcluster.Manage
 		}
 
 		// Then we update the properties struct
+		fs := make([]managedcluster.SettingsSectionDescription, 0)
 		for k, v := range fsMap {
 			fs = append(fs, managedcluster.SettingsSectionDescription{
 				Name:       k,
@@ -884,7 +886,7 @@ func expandClusterProperties(model *ClusterResourceModel) *managedcluster.Manage
 		out.FabricSettings = &fs
 	}
 
-	out.HttpGatewayConnectionPort = &model.HTTPGatewayPort
+	out.HTTPGatewayConnectionPort = &model.HTTPGatewayPort
 
 	if rules := model.LBRules; len(rules) > 0 {
 		lbRules := make([]managedcluster.LoadBalancingRule, len(rules))
@@ -1209,8 +1211,8 @@ func lbRulesSchema() *pluginsdk.Schema {
 					Type:     pluginsdk.TypeString,
 					Required: true,
 					ValidateFunc: validation.StringInSlice([]string{
-						string(managedcluster.ProbeProtocolHttp),
-						string(managedcluster.ProbeProtocolHttps),
+						string(managedcluster.ProbeProtocolHTTP),
+						string(managedcluster.ProbeProtocolHTTPS),
 						string(managedcluster.ProbeProtocolTcp),
 					}, false),
 				},

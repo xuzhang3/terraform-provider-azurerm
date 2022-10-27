@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/timeseriesinsights/mgmt/2020-05-15/timeseriesinsights"
+	"github.com/hashicorp/go-azure-helpers/resourcemanager/commonschema"
 	"github.com/hashicorp/go-azure-helpers/resourcemanager/location"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/azure"
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
@@ -48,9 +49,9 @@ func resourceIoTTimeSeriesInsightsGen2Environment() *pluginsdk.Resource {
 				),
 			},
 
-			"location": azure.SchemaLocation(),
+			"location": commonschema.Location(),
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			"resource_group_name": commonschema.ResourceGroupName(),
 
 			"sku_name": {
 				Type:     pluginsdk.TypeString,
@@ -67,7 +68,7 @@ func resourceIoTTimeSeriesInsightsGen2Environment() *pluginsdk.Resource {
 				ValidateFunc: azValidate.ISO8601Duration,
 			},
 			"id_properties": {
-				Type:     pluginsdk.TypeSet,
+				Type:     pluginsdk.TypeList,
 				Required: true,
 				ForceNew: true,
 				Elem: &pluginsdk.Schema{
@@ -146,7 +147,7 @@ func resourceIoTTimeSeriesInsightsGen2EnvironmentCreateUpdate(d *pluginsdk.Resou
 		Tags:     tags.Expand(t),
 		Sku:      sku,
 		Gen2EnvironmentCreationProperties: &timeseriesinsights.Gen2EnvironmentCreationProperties{
-			TimeSeriesIDProperties: expandIdProperties(d.Get("id_properties").(*pluginsdk.Set).List()),
+			TimeSeriesIDProperties: expandIdProperties(d.Get("id_properties").([]interface{})),
 			StorageConfiguration:   expandStorage(d.Get("storage").([]interface{})),
 		},
 	}

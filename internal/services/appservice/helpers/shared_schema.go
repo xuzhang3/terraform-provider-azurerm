@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/web/mgmt/2021-02-01/web"
-	appserviceValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/appservice/validate"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/services/appservice/validate"
 	networkValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/network/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/validation"
@@ -54,13 +54,10 @@ func IpRestrictionSchema() *pluginsdk.Schema {
 		Elem: &pluginsdk.Resource{
 			Schema: map[string]*pluginsdk.Schema{
 				"ip_address": {
-					Type:     pluginsdk.TypeString,
-					Optional: true,
-					ValidateFunc: validation.Any(
-						validation.IsCIDR,
-						validation.IsIPAddress,
-					),
-					Description: "The CIDR notation of the IP or IP Range to match. For example: `10.0.0.0/24` or `192.168.10.1/32` or `fe80::/64`",
+					Type:         pluginsdk.TypeString,
+					Optional:     true,
+					ValidateFunc: validate.IsIpOrCIDRRangeList,
+					Description:  "The CIDR notation of the IP or IP Range to match. For example: `10.0.0.0/24` or `192.168.10.1/32` or `fe80::/64` or `13.107.6.152/31,13.107.128.0/22`",
 				},
 
 				"service_tag": {
@@ -1554,7 +1551,7 @@ func StickySettingsSchema() *pluginsdk.Schema {
 					Optional: true,
 					Elem: &pluginsdk.Schema{
 						Type:         pluginsdk.TypeString,
-						ValidateFunc: appserviceValidate.AppSettingName,
+						ValidateFunc: validation.StringIsNotEmpty,
 					},
 					AtLeastOneOf: []string{
 						"sticky_settings.0.app_setting_names",
@@ -1568,7 +1565,7 @@ func StickySettingsSchema() *pluginsdk.Schema {
 					Optional: true,
 					Elem: &pluginsdk.Schema{
 						Type:         pluginsdk.TypeString,
-						ValidateFunc: appserviceValidate.AppSettingName,
+						ValidateFunc: validation.StringIsNotEmpty,
 					},
 					AtLeastOneOf: []string{
 						"sticky_settings.0.app_setting_names",

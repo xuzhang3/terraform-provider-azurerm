@@ -113,7 +113,7 @@ The following arguments are supported:
 
 * `location` - (Required) The Azure Region where the Template should exist. Changing this forces a new Template to be created.
 
-* `management_group_name` - (Required) The Name of the Management Group to apply the Deployment Template to.
+* `management_group_id` - (Required) The ID of the Management Group to apply the Deployment Template to.
 
 * `name` - (Required) The name which should be used for this Template Deployment. Changing this forces a new Template Deployment to be created.
 
@@ -140,7 +140,7 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 ## Timeouts
 
-The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/docs/configuration/resources.html#timeouts) for certain actions:
+The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/language/resources/syntax#operation-timeouts) for certain actions:
 
 * `create` - (Defaults to 3 hours) Used when creating the Management Group Template Deployment.
 * `read` - (Defaults to 5 minutes) Used when retrieving the Management Group Template Deployment.
