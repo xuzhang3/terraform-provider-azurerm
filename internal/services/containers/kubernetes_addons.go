@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/hashicorp/go-azure-sdk/resource-manager/containerservice/2022-08-02-preview/managedclusters"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/containerservice/2022-09-02-preview/managedclusters"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/operationalinsights/2020-08-01/workspaces"
 	commonValidate "github.com/hashicorp/terraform-provider-azurerm/helpers/validate"
 	containerValidate "github.com/hashicorp/terraform-provider-azurerm/internal/services/containers/validate"
@@ -19,12 +19,13 @@ import (
 const (
 	// note: the casing on these keys is important
 	aciConnectorKey                 = "aciConnectorLinux"
-	azurePolicyKey                  = "azurepolicy"
-	httpApplicationRoutingKey       = "httpApplicationRouting"
-	omsAgentKey                     = "omsagent"
-	ingressApplicationGatewayKey    = "ingressApplicationGateway"
-	openServiceMeshKey              = "openServiceMesh"
 	azureKeyvaultSecretsProviderKey = "azureKeyvaultSecretsProvider"
+	azurePolicyKey                  = "azurepolicy"
+	confidentialComputingKey        = "ACCSGXDevicePlugin"
+	httpApplicationRoutingKey       = "httpApplicationRouting"
+	ingressApplicationGatewayKey    = "ingressApplicationGateway"
+	omsAgentKey                     = "omsagent"
+	openServiceMeshKey              = "openServiceMesh"
 )
 
 // The AKS API hard-codes which add-ons are supported in which environment
@@ -247,6 +248,7 @@ func expandKubernetesAddOns(d *pluginsdk.ResourceData, input map[string]interfac
 	}
 
 	addonProfiles := map[string]managedclusters.ManagedClusterAddonProfile{}
+
 	if d.HasChange("http_application_routing_enabled") {
 		addonProfiles[httpApplicationRoutingKey] = managedclusters.ManagedClusterAddonProfile{
 			Enabled: input["http_application_routing_enabled"].(bool),
@@ -434,7 +436,6 @@ func flattenKubernetesAddOns(profile map[string]managedclusters.ManagedClusterAd
 			"log_analytics_workspace_id": workspaceID,
 			"oms_agent_identity":         omsAgentIdentity,
 		})
-
 	}
 
 	ingressApplicationGateways := make([]interface{}, 0)
@@ -512,10 +513,10 @@ func flattenKubernetesAddOns(profile map[string]managedclusters.ManagedClusterAd
 		"azure_policy_enabled":               azurePolicyEnabled,
 		"http_application_routing_enabled":   httpApplicationRoutingEnabled,
 		"http_application_routing_zone_name": httpApplicationRoutingZone,
-		"oms_agent":                          omsAgents,
 		"ingress_application_gateway":        ingressApplicationGateways,
-		"open_service_mesh_enabled":          openServiceMeshEnabled,
 		"key_vault_secrets_provider":         azureKeyVaultSecretsProviders,
+		"oms_agent":                          omsAgents,
+		"open_service_mesh_enabled":          openServiceMeshEnabled,
 	}
 }
 
