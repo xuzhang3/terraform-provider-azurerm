@@ -146,6 +146,7 @@ func SupportedTypedServices() []sdk.TypedServiceRegistration {
 		policy.Registration{},
 		privatednsresolver.Registration{},
 		recoveryservices.Registration{},
+		redhatopenshift.Registration{},
 		resource.Registration{},
 		sentinel.Registration{},
 		serviceconnector.Registration{},
