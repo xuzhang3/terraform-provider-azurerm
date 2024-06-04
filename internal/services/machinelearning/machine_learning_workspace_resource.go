@@ -101,6 +101,8 @@ func resourceMachineLearningWorkspace() *pluginsdk.Resource {
 				ValidateFunc: validation.StringInSlice([]string{
 					"Default",
 					"FeatureStore",
+					"Hub",
+					"Project",
 				}, false),
 				Default: "Default",
 			},
@@ -215,6 +217,12 @@ func resourceMachineLearningWorkspace() *pluginsdk.Resource {
 				Type:     pluginsdk.TypeBool,
 				Optional: true,
 				ForceNew: true,
+			},
+
+			"hub_resource_id": { // TODO for project type resource
+				Type:         pluginsdk.TypeString,
+				Optional:     true,
+				ValidateFunc: workspaces.ValidateWorkspaceID,
 			},
 
 			"sku_name": {
@@ -349,6 +357,12 @@ func resourceMachineLearningWorkspaceCreateOrUpdate(d *pluginsdk.ResourceData, m
 		}
 	}
 
+	if hubResId, ok := d.GetOk("hub_resource_id"); ok {
+		if strings.EqualFold(*workspace.Kind, "Project") && (hubResId == nil || hubResId == "") {
+			return fmt.Errorf("`hub_resource_id` must be set if `kind=Project`")
+		}
+	}
+
 	workspace.Properties.ServerlessComputeSettings = serverlessCompute
 
 	if networkAccessBehindVnetEnabled {
@@ -456,6 +470,7 @@ func resourceMachineLearningWorkspaceRead(d *pluginsdk.ResourceData, meta interf
 		d.Set("primary_user_assigned_identity", props.PrimaryUserAssignedIdentity)
 		d.Set("public_network_access_enabled", *props.PublicNetworkAccess == workspaces.PublicNetworkAccessEnabled)
 		d.Set("v1_legacy_mode_enabled", props.V1LegacyMode)
+		d.Set("hub_resource_id", props.HubResourceId)
 		d.Set("workspace_id", props.WorkspaceId)
 		d.Set("managed_network", flattenMachineLearningWorkspaceManagedNetwork(props.ManagedNetwork))
 		d.Set("serverless_compute", flattenMachineLearningWorkspaceServerlessCompute(props.ServerlessComputeSettings))
