@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2024-04-01/datastore"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2024-04-01/machinelearningcomputes"
+	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2024-04-01/v2workspaceconnectionresource"
 	"github.com/hashicorp/go-azure-sdk/resource-manager/machinelearningservices/2024-04-01/workspaces"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/common"
 )
@@ -16,6 +17,7 @@ type Client struct {
 	Datastore               *datastore.DatastoreClient
 	MachineLearningComputes *machinelearningcomputes.MachineLearningComputesClient
 	Workspaces              *workspaces.WorkspacesClient
+	WorkspaceConnection     *v2workspaceconnectionresource.V2WorkspaceConnectionResourceClient
 }
 
 func NewClient(o *common.ClientOptions) (*Client, error) {
@@ -31,6 +33,12 @@ func NewClient(o *common.ClientOptions) (*Client, error) {
 	}
 	o.Configure(workspacesClient.Client, o.Authorizers.ResourceManager)
 
+	workspaceConnectionClient, err := v2workspaceconnectionresource.NewV2WorkspaceConnectionResourceClientWithBaseURI(o.Environment.ResourceManager)
+	if err != nil {
+		return nil, fmt.Errorf("building Workspace Connection client: %+v", err)
+	}
+	o.Configure(workspacesClient.Client, o.Authorizers.ResourceManager)
+
 	computesClient, err := machinelearningcomputes.NewMachineLearningComputesClientWithBaseURI(o.Environment.ResourceManager)
 	if err != nil {
 		return nil, fmt.Errorf("building MachineLearningComputes client: %+v", err)
@@ -41,5 +49,6 @@ func NewClient(o *common.ClientOptions) (*Client, error) {
 		MachineLearningComputes: computesClient,
 		Datastore:               datastoreClient,
 		Workspaces:              workspacesClient,
+		WorkspaceConnection:     workspaceConnectionClient,
 	}, nil
 }
