@@ -54,11 +54,11 @@ resource "azurerm_machine_learning_workspace" "example" {
   application_insights_id = azurerm_application_insights.example.id
   key_vault_id            = azurerm_key_vault.example.id
   storage_account_id      = azurerm_storage_account.example.id
-  
+
   managed_network {
     isolation_mode = "AllowOnlyApprovedOutbound"
   }
-  
+
   identity {
     type = "SystemAssigned"
   }
@@ -73,8 +73,8 @@ resource "azurerm_storage_account" "example2" {
 }
 
 resource "azurerm_machine_learning_workspace_network_outbound_rule_private_endpoint" "example" {
-  name         = "example-outboundrule"
-  workspace_id = azurerm_machine_learning_workspace.example.id
+  name                = "example-outboundrule"
+  workspace_id        = azurerm_machine_learning_workspace.example.id
   service_resource_id = azurerm_storage_account.example2.id
   sub_resource_target = "blob"
 }
