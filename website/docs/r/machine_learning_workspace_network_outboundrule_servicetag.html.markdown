@@ -92,16 +92,16 @@ The following arguments are supported:
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* `id` - The ID of the Machine Learning Workspace.
+* `id` - The ID of the Machine Learning Workspace Network Outbound Rule.
 
 ### Timeouts
 
 The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/language/resources/syntax#operation-timeouts) for certain actions:
 
-* `create` - (Defaults to 30 minutes) Used when creating the Machine Learning Workspace FQDN Network Outbound Rule.
-* `update` - (Defaults to 30 minutes) Used when updating the Machine Learning Workspace FQDN Network Outbound Rule.
-* `read` - (Defaults to 5 minutes) Used when retrieving the Machine Learning Workspace FQDN Network Outbound Rule.
-* `delete` - (Defaults to 30 minutes) Used when deleting the Machine Learning Workspace FQDN Network Outbound Rule.
+* `create` - (Defaults to 30 minutes) Used when creating the Machine Learning Workspace Service Tag Network Outbound Rule.
+* `update` - (Defaults to 30 minutes) Used when updating the Machine Learning Workspace Service Tag Network Outbound Rule.
+* `read` - (Defaults to 5 minutes) Used when retrieving the Machine Learning Workspace Service Tag Network Outbound Rule.
+* `delete` - (Defaults to 30 minutes) Used when deleting the Machine Learning Workspace Service Tag Network Outbound Rule.
 
 ## Import
 
